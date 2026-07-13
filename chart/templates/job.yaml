@@ -1,0 +1,234 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "qo.fullname" . }}-backend-collectstatic
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: quotation-book-backend-collectstatic
+        image: quotation-book-backend:{{ .Values.backendCollectstatic.image.tag | default "latest" }}
+        command:
+          - /opt/app-root/src/docker-entrypoint.sh
+        args:
+          - collectstatic
+        imagePullPolicy: {{ .Values.application.imagePullPolicy }}
+        {{- with .Values.backendCollectstatic.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        envFrom:
+          - configMapRef:
+              name: quotation-book-backend
+        env:
+          - name: DB_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: POSTGRES_DB_HOST
+          - name: DB_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: POSTGRES_DB_PORT
+          - name: REDIS_SSL
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: ENABLE_SSL_REDIS
+          - name: REDIS_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: REDIS_PORT_TLS
+          - name: RABBITMQ_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: RABBITMQ_PORT_SSL
+          - name: DB_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: POSTGRES_DB_NAME
+          - name: DB_USER
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: POSTGRES_DB_USER
+          - name: DB_PASSWORD
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: POSTGRES_DB_PASSWORD
+          - name: MINIO_ACCESS_KEY
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: MINIO_ROOT_USER
+          - name: MINIO_SECRET_KEY
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: MINIO_ROOT_PASSWORD
+        volumeMounts:
+          - name: backend-data
+            mountPath: /opt/app-root/src/static
+      volumes:
+        - name: backend-data
+          persistentVolumeClaim:
+            claimName: quotation-book-backend-data
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "qo.fullname" . }}-backend-collectminio
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: quotation-book-backend-collectminio
+        image: quotation-book-backend:{{ .Values.backendCollectminio.image.tag | default "latest" }}
+        command:
+          - /opt/app-root/src/docker-entrypoint.sh
+        args:
+          - collectminio
+        imagePullPolicy: {{ .Values.application.imagePullPolicy }}
+        {{- with .Values.backendCollectminio.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        envFrom:
+          - configMapRef:
+              name: quotation-book-backend
+        env:
+          - name: DB_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: POSTGRES_DB_HOST
+          - name: DB_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: POSTGRES_DB_PORT
+          - name: REDIS_SSL
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: ENABLE_SSL_REDIS
+          - name: REDIS_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: REDIS_PORT_TLS
+          - name: RABBITMQ_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: RABBITMQ_PORT_SSL
+          - name: DB_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: POSTGRES_DB_NAME
+          - name: DB_USER
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: POSTGRES_DB_USER
+          - name: DB_PASSWORD
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: POSTGRES_DB_PASSWORD
+          - name: MINIO_ACCESS_KEY
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: MINIO_ROOT_USER
+          - name: MINIO_SECRET_KEY
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: MINIO_ROOT_PASSWORD
+        volumeMounts:
+          - name: backend-data
+            mountPath: /opt/app-root/src/static
+      volumes:
+        - name: backend-data
+          persistentVolumeClaim:
+            claimName: quotation-book-backend-data
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "qo.fullname" . }}-postgres-migration
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: quotation-book-postgres-migration
+        image: quotation-book-postgres-migration:{{ .Values.postgresMigration.image.tag | default "latest" }}
+        imagePullPolicy: {{ .Values.application.imagePullPolicy }}
+        {{- with .Values.postgresMigration.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        envFrom:
+          - configMapRef:
+              name: quotation-book-postgres
+          - configMapRef:
+              name: quotation-book-postgres-migration
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "qo.fullname" . }}-minio-migration
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: Never
+      initContainers:
+      - name: wait-minio
+        image: quotation-book-dotnet-obs:{{ .Values.postgres.image.tag | default "latest" }}
+        imagePullPolicy: {{ .Values.application.imagePullPolicy }}
+        command:
+        - sh
+        - -c
+        - |
+          until curl -k -f https://quotation-book-minio:9000/minio/health/ready; do
+            echo "waiting for minio"
+            sleep 5
+          done
+      containers:
+      - name: quotation-book-minio-migration
+        image: quotation-book-minio-migration:{{ .Values.minioMigration.image.tag | default "latest" }}
+        imagePullPolicy: {{ .Values.application.imagePullPolicy }}
+        {{- with .Values.minioMigration.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        envFrom:
+          - configMapRef:
+              name: quotation-book-minio
+          - configMapRef:
+              name: quotation-book-minio-migration

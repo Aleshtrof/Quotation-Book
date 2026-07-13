@@ -1,0 +1,542 @@
+services:
+
+  quotation-book-frontend:
+    build:
+      context: ../..
+      dockerfile: docker/QB.Frontend.Dockerfile
+      args:
+        DOCKER_REGISTRY: "${DOCKER_REGISTRY}"
+        NGINX_BASE_IMAGE: "${NGINX_BASE_IMAGE}"
+    image: quotation-book-frontend:latest
+    restart: unless-stopped
+    volumes:
+      - /opt/devops-tools-sandbox-assignment-for-interns/static-data:/opt/app-root/src/static
+    depends_on:
+      quotation-book-backend:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT}:${FRONTEND_PORT}"
+    environment:
+      BACKEND_HOST: "${BACKEND_HOST}"
+      CERT_FQDN: "${CERT_FQDN}"
+      KEYCLOAK_HOST: "${KEYCLOAK_HOST}"
+      KEYCLOAK_PORT: "${KEYCLOAK_PORT}"
+      KEYCLOAK_EXTERNAL_PORT: "${KEYCLOAK_EXTERNAL_PORT}"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -k -f https://localhost:${FRONTEND_PORT}/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+
+  quotation-book-backend:
+    build:
+      context: ../..
+      dockerfile: docker/QB.Backend.Dockerfile
+      args:
+        DOCKER_REGISTRY: "${DOCKER_REGISTRY}"
+        PYTHON_BASE_IMAGE: "${PYTHON_BASE_IMAGE}"
+        PIP_INDEX_URL_PARAM: "${PIP_INDEX_URL_PARAM}"
+        PIP_TRUSTED_HOST_PARAM: "${PIP_TRUSTED_HOST_PARAM}"
+        REDOS_REPO_FILE: "${REDOS_REPO_FILE}"
+    image: quotation-book-backend:latest
+    command: ["backend"]
+    restart: unless-stopped
+    volumes:
+      - /opt/devops-tools-sandbox-assignment-for-interns/static-data:/opt/app-root/src/static
+    depends_on:
+      quotation-book-postgres-migration:
+        condition: service_completed_successfully
+      quotation-book-redis:
+        condition: service_healthy
+      quotation-book-rabbitmq:
+        condition: service_healthy
+      quotation-book-keycloak:
+        condition: service_healthy
+      quotation-book-minio-migration:
+        condition: service_completed_successfully
+    environment:
+      PIP_INDEX_URL_PARAM: "${PIP_INDEX_URL_PARAM}"
+      PIP_TRUSTED_HOST_PARAM: "${PIP_TRUSTED_HOST_PARAM}"
+      KEYCLOAK_CLIENT_ID: "${KEYCLOAK_CLIENT_ID}"
+      KEYCLOAK_CLIENT_SECRET: "${KEYCLOAK_CLIENT_SECRET}"
+      KEYCLOAK_REALM: "${KEYCLOAK_REALM}"
+      KEYCLOAK_REDIRECT_URI: "${KEYCLOAK_REDIRECT_URI}"
+      FLASK_SECRET_KEY: "${FLASK_SECRET_KEY}"
+      SESSION_COOKIE_SECURE: "${SESSION_COOKIE_SECURE}"
+      SESSION_COOKIE_HTTPONLY: "${SESSION_COOKIE_HTTPONLY}"
+      SESSION_COOKIE_SAMESITE: "${SESSION_COOKIE_SAMESITE}"
+      USERINFO_CACHE_TTL: "${USERINFO_CACHE_TTL}"
+      POSTGRES_CACHE_TTL: "${POSTGRES_CACHE_TTL}"
+      BACKEND_PORT: "${BACKEND_PORT}"
+      CA_CERTIFICATE: "${CA_CERTIFICATE}"
+      BACKEND_TLS: "${BACKEND_TLS}"
+      BACKEND_SSL_KEY: "${BACKEND_SSL_KEY}"
+      BACKEND_SSL_CERT: "${BACKEND_SSL_CERT}"
+      POSTGRES_SSL: "${POSTGRES_SSL}"
+      MINIO_SSL_VERIFY: "${MINIO_SSL_VERIFY}"
+      DB_HOST: "${POSTGRES_DB_HOST}"              ## error in the variable name in entrypoint.sh
+      DB_PORT: "${POSTGRES_DB_PORT}"              ## error in the variable name in entrypoint.sh
+      REDIS_PASS: "${REDIS_PASS}"
+      KEYCLOAK_HOST: "${KEYCLOAK_HOST}"
+      KEYCLOAK_PORT: "${KEYCLOAK_PORT}"
+      RABBITMQ_USER: "${RABBITMQ_USER}"
+      RABBITMQ_PASSWORD: "${RABBITMQ_PASSWORD}"
+      RABBITMQ_HOST: "${RABBITMQ_HOST}"
+      RABBITMQ_PORT: "${RABBITMQ_PORT_SSL}"
+      RABBITMQ_VHOST: "${RABBITMQ_VHOST}"
+      DB_NAME: "${POSTGRES_DB_NAME}"
+      DB_USER: "${POSTGRES_DB_USER}"
+      DB_PASSWORD: "${POSTGRES_DB_PASSWORD}"
+      MINIO_URL: "${MINIO_URL}"
+      MINIO_PORT: "${MINIO_PORT}"
+      MINIO_ACCESS_KEY: "${MINIO_ROOT_USER}"
+      MINIO_SECRET_KEY: "${MINIO_ROOT_PASSWORD}"
+      MINIO_BUCKET_NAME: "${MINIO_BUCKET_NAME}"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -k -f https://localhost:${BACKEND_PORT}/check"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  quotation-book-backend-worker:
+    image: quotation-book-backend:latest
+    command: ["worker"]
+    restart: unless-stopped
+    volumes:
+      - /opt/devops-tools-sandbox-assignment-for-interns/static-data:/opt/app-root/src/static
+    depends_on:
+      quotation-book-redis:
+        condition: service_healthy
+      quotation-book-minio-migration:
+        condition: service_completed_successfully
+      quotation-book-rabbitmq:
+        condition: service_healthy
+    environment:
+      PIP_INDEX_URL_PARAM: "${PIP_INDEX_URL_PARAM}"
+      PIP_TRUSTED_HOST_PARAM: "${PIP_TRUSTED_HOST_PARAM}"
+      KEYCLOAK_CLIENT_ID: "${KEYCLOAK_CLIENT_ID}"
+      KEYCLOAK_CLIENT_SECRET: "${KEYCLOAK_CLIENT_SECRET}"
+      KEYCLOAK_REALM: "${KEYCLOAK_REALM}"
+      KEYCLOAK_REDIRECT_URI: "${KEYCLOAK_REDIRECT_URI}"
+      FLASK_SECRET_KEY: "${FLASK_SECRET_KEY}"
+      SESSION_COOKIE_SECURE: "${SESSION_COOKIE_SECURE}"
+      SESSION_COOKIE_HTTPONLY: "${SESSION_COOKIE_HTTPONLY}"
+      SESSION_COOKIE_SAMESITE: "${SESSION_COOKIE_SAMESITE}"
+      USERINFO_CACHE_TTL: "${USERINFO_CACHE_TTL}"
+      POSTGRES_CACHE_TTL: "${POSTGRES_CACHE_TTL}"
+      BACKEND_PORT: "${BACKEND_PORT}"
+      CA_CERTIFICATE: "${CA_CERTIFICATE}"
+      BACKEND_TLS: "${BACKEND_TLS}"
+      BACKEND_SSL_KEY: "${BACKEND_SSL_KEY}"
+      BACKEND_SSL_CERT: "${BACKEND_SSL_CERT}"
+      POSTGRES_SSL: "${POSTGRES_SSL}"
+      MINIO_SSL_VERIFY: "${MINIO_SSL_VERIFY}"
+      DB_HOST: "${POSTGRES_DB_HOST}"              ## error in the variable name in entrypoint.sh
+      DB_PORT: "${POSTGRES_DB_PORT}"              ## error in the variable name in entrypoint.sh
+      RABBITMQ_USER: "${RABBITMQ_USER}"
+      RABBITMQ_PASSWORD: "${RABBITMQ_PASSWORD}"
+      RABBITMQ_HOST: "${RABBITMQ_HOST}"
+      RABBITMQ_PORT: "${RABBITMQ_PORT_SSL}"
+      RABBITMQ_VHOST: "${RABBITMQ_VHOST}"
+      REDIS_SSL: "${ENABLE_SSL_REDIS}"
+      REDIS_HOST: "${REDIS_HOST}"
+      REDIS_PORT: "${REDIS_PORT_TLS}"
+      REDIS_PASS: "${REDIS_PASS}"
+      MINIO_URL: "${MINIO_URL}"
+      MINIO_PORT: "${MINIO_PORT}"
+      MINIO_ACCESS_KEY: "${MINIO_ROOT_USER}"
+      MINIO_SECRET_KEY: "${MINIO_ROOT_PASSWORD}"
+      MINIO_BUCKET_NAME: "${MINIO_BUCKET_NAME}"
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f worker.py || exit 1"]     ## проверить действительно ли процесс так называется???
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  quotation-book-backend-collectstatic:
+    image: quotation-book-backend:latest
+    command: ["collectstatic"]
+    restart: no
+    volumes:
+      - /opt/devops-tools-sandbox-assignment-for-interns/static-data:/opt/app-root/src/static
+    depends_on:
+      quotation-book-minio-migration:
+        condition: service_completed_successfully
+    environment:
+      PIP_INDEX_URL_PARAM: "${PIP_INDEX_URL_PARAM}"
+      PIP_TRUSTED_HOST_PARAM: "${PIP_TRUSTED_HOST_PARAM}"
+      KEYCLOAK_CLIENT_ID: "${KEYCLOAK_CLIENT_ID}"
+      KEYCLOAK_CLIENT_SECRET: "${KEYCLOAK_CLIENT_SECRET}"
+      KEYCLOAK_REALM: "${KEYCLOAK_REALM}"
+      KEYCLOAK_REDIRECT_URI: "${KEYCLOAK_REDIRECT_URI}"
+      FLASK_SECRET_KEY: "${FLASK_SECRET_KEY}"
+      SESSION_COOKIE_SECURE: "${SESSION_COOKIE_SECURE}"
+      SESSION_COOKIE_HTTPONLY: "${SESSION_COOKIE_HTTPONLY}"
+      SESSION_COOKIE_SAMESITE: "${SESSION_COOKIE_SAMESITE}"
+      USERINFO_CACHE_TTL: "${USERINFO_CACHE_TTL}"
+      POSTGRES_CACHE_TTL: "${POSTGRES_CACHE_TTL}"
+      BACKEND_PORT: "${BACKEND_PORT}"
+      CA_CERTIFICATE: "${CA_CERTIFICATE}"
+      BACKEND_TLS: "${BACKEND_TLS}"
+      BACKEND_SSL_KEY: "${BACKEND_SSL_KEY}"
+      BACKEND_SSL_CERT: "${BACKEND_SSL_CERT}"
+      POSTGRES_SSL: "${POSTGRES_SSL}"
+      MINIO_SSL_VERIFY: "${MINIO_SSL_VERIFY}"
+      DB_HOST: "${POSTGRES_DB_HOST}"              ## error in the variable name in entrypoint.sh
+      DB_PORT: "${POSTGRES_DB_PORT}"              ## error in the variable name in entrypoint.sh
+      MINIO_URL: "${MINIO_URL}"
+      MINIO_PORT: "${MINIO_PORT}"
+      MINIO_ACCESS_KEY: "${MINIO_ROOT_USER}"
+      MINIO_SECRET_KEY: "${MINIO_ROOT_PASSWORD}"
+      MINIO_BUCKET_NAME: "${MINIO_BUCKET_NAME}"
+
+  quotation-book-backend-collectminio:
+    image: quotation-book-backend:latest
+    command: ["collectminio"]
+    restart: no
+    depends_on:
+      quotation-book-minio-migration:
+        condition: service_completed_successfully
+    environment:
+      PIP_INDEX_URL_PARAM: "${PIP_INDEX_URL_PARAM}"
+      PIP_TRUSTED_HOST_PARAM: "${PIP_TRUSTED_HOST_PARAM}"
+      KEYCLOAK_CLIENT_ID: "${KEYCLOAK_CLIENT_ID}"
+      KEYCLOAK_CLIENT_SECRET: "${KEYCLOAK_CLIENT_SECRET}"
+      KEYCLOAK_REALM: "${KEYCLOAK_REALM}"
+      KEYCLOAK_REDIRECT_URI: "${KEYCLOAK_REDIRECT_URI}"
+      FLASK_SECRET_KEY: "${FLASK_SECRET_KEY}"
+      SESSION_COOKIE_SECURE: "${SESSION_COOKIE_SECURE}"
+      SESSION_COOKIE_HTTPONLY: "${SESSION_COOKIE_HTTPONLY}"
+      SESSION_COOKIE_SAMESITE: "${SESSION_COOKIE_SAMESITE}"
+      USERINFO_CACHE_TTL: "${USERINFO_CACHE_TTL}"
+      POSTGRES_CACHE_TTL: "${POSTGRES_CACHE_TTL}"
+      BACKEND_PORT: "${BACKEND_PORT}"
+      CA_CERTIFICATE: "${CA_CERTIFICATE}"
+      BACKEND_TLS: "${BACKEND_TLS}"
+      BACKEND_SSL_KEY: "${BACKEND_SSL_KEY}"
+      BACKEND_SSL_CERT: "${BACKEND_SSL_CERT}"
+      POSTGRES_SSL: "${POSTGRES_SSL}"
+      MINIO_SSL_VERIFY: "${MINIO_SSL_VERIFY}"
+      DB_HOST: "${POSTGRES_DB_HOST}"              ## error in the variable name in entrypoint.sh
+      DB_PORT: "${POSTGRES_DB_PORT}"              ## error in the variable name in entrypoint.sh
+      MINIO_URL: "${MINIO_URL}"
+      MINIO_PORT: "${MINIO_PORT}"
+      MINIO_ACCESS_KEY: "${MINIO_ROOT_USER}"
+      MINIO_SECRET_KEY: "${MINIO_ROOT_PASSWORD}"
+      MINIO_BUCKET_NAME: "${MINIO_BUCKET_NAME}"
+
+  quotation-book-postgres:
+    build:
+      context: ../..
+      dockerfile: docker/QB.Postgres.Dockerfile
+      args:
+        DOCKER_REGISTRY: "${DOCKER_REGISTRY}"
+        POSTGRES_BASE_IMAGE: "${POSTGRES_BASE_IMAGE}"
+    image: quotation-book-postgres:latest
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB_NAME: "${POSTGRES_DB_NAME}"
+      POSTGRES_DB_USER: "${POSTGRES_DB_USER}"
+      POSTGRES_DB_PASSWORD: "${POSTGRES_DB_PASSWORD}"
+      POSTGRES_SUPERUSER_PASSWORD: "${POSTGRES_SUPERUSER_PASSWORD}"
+      POSTGRES_DB_HOST: "${POSTGRES_DB_HOST}"
+      POSTGRES_DB_PORT: "${POSTGRES_DB_PORT}"
+      PGDATA: "${PGDATA}"
+      POSTGRES_CA_CERT: "${POSTGRES_CA_CERT}"
+      POSTGRES_CERT_FILE: "${POSTGRES_CERT_FILE}"
+      POSTGRES_KEY_FILE: "${POSTGRES_KEY_FILE}"
+      POSTGRES_ENABLE_SSL: "${POSTGRES_ENABLE_SSL}"
+      POSTGRES_SUPERUSER_NAME: "${POSTGRES_SUPERUSER_NAME}"
+      KEYCLOAK_DB_USER: "${KC_DB_USERNAME}"          ## error in the variable name in entrypoint.sh
+      KEYCLOAK_DB_PASSWORD: "${KC_DB_PASSWORD}"      ## error in the variable name in entrypoint.sh
+      KEYCLOAK_DB_NAME: "${KC_DB_NAME}"              ## error in the variable name in entrypoint.sh
+      POSTGRES_USER: "postgres"                      ## error in the variable name in entrypoint.sh
+      POSTGRES_PASSWORD: "postgres"                  ## the variable missing from the .env file
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  quotation-book-postgres-migration:
+    build:
+      context: ../..
+      dockerfile: docker/QB.Postgres.Migration.Dockerfile
+      args:
+        DOCKER_REGISTRY: "${DOCKER_REGISTRY}"
+        DB_MIGRATION_BASE_IMAGE: "${DB_MIGRATION_BASE_IMAGE}"
+        POSTGRES_DB_CONNECTION_ENCRYPT: "${POSTGRES_DB_CONNECTION_ENCRYPT}"
+    image: quotation-book-postgres-migration:latest
+    restart: no
+    depends_on:
+      quotation-book-postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_DB_NAME: "${POSTGRES_DB_NAME}"
+      POSTGRES_DB_USER: "${POSTGRES_DB_USER}"
+      POSTGRES_DB_PASSWORD: "${POSTGRES_DB_PASSWORD}"
+      POSTGRES_SUPERUSER_PASSWORD: "${POSTGRES_SUPERUSER_PASSWORD}"
+      POSTGRES_DB_HOST: "${POSTGRES_DB_HOST}"
+      POSTGRES_DB_PORT: "${POSTGRES_DB_PORT}"
+      PGDATA: "${PGDATA}"
+      POSTGRES_CA_CERT: "${POSTGRES_CA_CERT}"
+      POSTGRES_CERT_FILE: "${POSTGRES_CERT_FILE}"
+      POSTGRES_KEY_FILE: "${POSTGRES_KEY_FILE}"
+      POSTGRES_ENABLE_SSL: "${POSTGRES_ENABLE_SSL}"
+      POSTGRES_SUPERUSER_NAME: "${POSTGRES_SUPERUSER_NAME}"
+      KEYCLOAK_DB_USER: "${KC_DB_USERNAME}"          ## error in the variable name in entrypoint.sh
+      KEYCLOAK_DB_PASSWORD: "${KC_DB_PASSWORD}"      ## error in the variable name in entrypoint.sh
+      KEYCLOAK_DB_NAME: "${KC_DB_NAME}"              ## error in the variable name in entrypoint.sh
+      POSTGRES_USER: "postgres"                      ## error in the variable name in entrypoint.sh
+      POSTGRES_PASSWORD: "postgres"                  ## the variable missing from the .env file
+      POSTGRES_DB_CONNECTION_ENCRYPT: "${POSTGRES_DB_CONNECTION_ENCRYPT}"
+
+  quotation-book-redis:
+    build:
+      context: ../..
+      dockerfile: docker/QB.Redis.Dockerfile
+      args:
+        DOCKER_REGISTRY: "${DOCKER_REGISTRY}"
+        REDIS_BASE_IMAGE: "${REDIS_BASE_IMAGE}"
+    image: quotation-book-redis:latest
+    restart: unless-stopped
+    environment:
+      REDIS_HOST: "${REDIS_HOST}"
+      REDIS_PORT: "${REDIS_PORT}"
+      REDIS_PASS: "${REDIS_PASS}"
+      TLS_PORT: "${REDIS_PORT_TLS}"                       ## error in the variable name in entrypoint.sh
+      ENABLE_SSL: "${ENABLE_SSL_REDIS}"                   ## error in the variable name in entrypoint.sh
+      TLS_CERT_FILE: "${TLS_CERT_FILE_REDIS}"             ## error in the variable name in entrypoint.sh
+      TLS_KEY_FILE: "${TLS_KEY_FILE_REDIS}"               ## error in the variable name in entrypoint.sh
+      TLS_CLIENT_CERT_AUTH: "${TLS_CLIENT_CERT_AUTH}"
+      TLS_CA_CERT_FILE: "${CA_CERTIFICATE}"   ## error in the variable name in entrypoint.sh
+      CA_CERTIFICATE: "${CA_CERTIFICATE}"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --pass ${REDIS_PASS} ping | grep PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  quotation-book-rabbitmq:
+    build:
+      context: ../..
+      dockerfile: docker/QB.RabbitMQ.Dockerfile
+      args:
+        DOCKER_REGISTRY: "${DOCKER_REGISTRY}"
+        RABBITMQ_BASE_IMAGE: "${RABBITMQ_BASE_IMAGE}"
+    image: quotation-book-rabbitmq:latest
+    restart: unless-stopped
+    ports:
+      - "${RABBITMQ_MANAGEMENT_PORT}:${RABBITMQ_MANAGEMENT_PORT}"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    environment:
+      RABBITMQ_HOST: "${RABBITMQ_HOST}"
+      RABBITMQ_PORT: "${RABBITMQ_PORT}"
+      RABBITMQ_PORT_SSL: "${RABBITMQ_PORT_SSL}"
+      RABBITMQ_MANAGEMENT_PORT: "${RABBITMQ_MANAGEMENT_PORT}"
+      RABBITMQ_USER: "${RABBITMQ_USER}"
+      RABBITMQ_PASSWORD: "${RABBITMQ_PASSWORD}"
+      RABBITMQ_VHOST: "${RABBITMQ_VHOST}"
+      ENABLE_SSL_RABBITMQ: "${ENABLE_SSL_RABBITMQ}"
+      RABBITMQ_CERT_FILE: "${RABBITMQ_CERT_FILE}"
+      RABBITMQ_KEY_FILE: "${RABBITMQ_KEY_FILE}"
+      RABBITMQ_ADM_LOGIN: "${RABBITMQ_ADM_LOGIN}"
+      RABBITMQ_ADM_PASSWORD: "${RABBITMQ_ADM_PASSWORD}"
+      RABBITMQ_SENDER_LOGIN: "${RABBITMQ_SENDER_LOGIN}"
+      RABBITMQ_SENDER_PASSWORD: "${RABBITMQ_SENDER_PASSWORD}"
+      RABBITMQ_RECIPIENT_LOGIN: "${RABBITMQ_RECIPIENT_LOGIN}"
+      RABBITMQ_RECIPIENT_PASSWORD: "${RABBITMQ_RECIPIENT_PASSWORD}"
+      DEFINITIONS_JSON_FILE: "${DEFINITIONS_JSON_FILE}"
+      ENABLE_SSL: "${ENABLE_SSL_RABBITMQ}"
+      SSL_PORT: "${RABBITMQ_PORT_SSL}"
+      CA_CERT_FILE: "${CA_CERTIFICATE}"
+      CERT_FILE: "${RABBITMQ_CERT_FILE}"
+      KEY_FILE: "${RABBITMQ_KEY_FILE}"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f -u ${RABBITMQ_USER}:${RABBITMQ_PASSWORD} http://localhost:${RABBITMQ_MANAGEMENT_PORT}/api/overview"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  quotation-book-minio:
+    build:
+      context: ../..
+      dockerfile: docker/QB.Minio.Dockerfile
+      args:
+        DOCKER_REGISTRY: "${DOCKER_REGISTRY}"
+        MINIO_BASE_IMAGE: "${MINIO_BASE_IMAGE}"
+    image: quotation-book-minio:latest
+    restart: unless-stopped
+    ports:
+      - "${MINIO_CONSOLE_PORT}:${MINIO_CONSOLE_PORT}"
+    volumes:
+      - minio_data:/bitnami/minio/data
+    environment:
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER}"
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD}"
+      MINIO_CONSOLE_PORT: "${MINIO_CONSOLE_PORT}"
+      MINIO_API_PORT: "${MINIO_API_PORT}"
+      MINIO_PORT: "${MINIO_PORT}"
+      MINIO_CERTS_DIR: "${MINIO_CERTS_DIR}"
+      MINIO_SCHEME: "${MINIO_SCHEME}"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -k -f https://localhost:${MINIO_API_PORT}/minio/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  quotation-book-minio-migration:
+    build:
+      context: ../..
+      dockerfile: docker/QB.Minio.Migration.Dockerfile
+      args:
+        DOCKER_REGISTRY: "${DOCKER_REGISTRY}"
+        MINIO_BASE_IMAGE_CLIENT: "${MINIO_BASE_IMAGE_CLIENT}"
+    image: quotation-book-minio-migration:latest
+    restart: no
+    depends_on:
+      quotation-book-minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER}"
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD}"
+      MINIO_CONSOLE_PORT: "${MINIO_CONSOLE_PORT}"
+      MINIO_API_PORT: "${MINIO_API_PORT}"
+      MINIO_PORT: "${MINIO_PORT}"
+      MINIO_CERTS_DIR: "${MINIO_CERTS_DIR}"
+      MINIO_SCHEME: "${MINIO_SCHEME}"
+      MINIO_URL: "${MINIO_URL}"
+      MINIO_BUCKET_NAME: "${MINIO_BUCKET_NAME}"
+
+  quotation-book-keycloak:
+    build:
+      context: ../..
+      dockerfile: docker/QB.Keycloak.Dockerfile
+      args:
+        DOCKER_REGISTRY: "${DOCKER_REGISTRY}"
+        KEYCLOAK_BASE_IMAGE: "${KEYCLOAK_BASE_IMAGE}"
+        CLIENT_URL: "${CLIENT_URL}"
+    image: quotation-book-keycloak:latest
+    restart: unless-stopped
+    depends_on:
+      quotation-book-postgres-migration:
+        condition: service_completed_successfully
+    ports:
+      - "${KC_HTTP_PORT}:${KC_HTTP_PORT}"
+      - "${KC_HTTPS_PORT}:${KC_HTTPS_PORT}"
+    environment:
+      KC_DB: "${KC_DB}"
+      KC_DB_NAME: "${KC_DB_NAME}"
+      KC_DB_USERNAME: "${KC_DB_USERNAME}"
+      KC_DB_PASSWORD: "${KC_DB_PASSWORD}"
+      KC_DB_URL_PROPERTIES: "${KC_DB_URL_PROPERTIES}"
+      KEYCLOAK_ADMIN: "${KEYCLOAK_ADMIN}"
+      KEYCLOAK_ADMIN_PASSWORD: "${KEYCLOAK_ADMIN_PASSWORD}"
+      KEYCLOAK_USER: "${KEYCLOAK_USER}"
+      KEYCLOAK_USER_PASSWORD: "${KEYCLOAK_USER_PASSWORD}"
+      KEYCLOAK_EXTERNAL_HOST: "${KEYCLOAK_EXTERNAL_HOST}"
+      KC_HTTP_ENABLED: "${KC_HTTP_ENABLED}"
+      KC_HTTP_PORT: "${KC_HTTP_PORT}"
+      KC_HTTPS_PORT: "${KC_HTTPS_PORT}"
+      KC_PROXY: "${KC_PROXY}"
+      CLIENT_URL: "${CLIENT_URL}"
+      JAVA_OPTS: "${JAVA_OPTS}"
+      POSTGRES_DB_HOST: "${POSTGRES_DB_HOST}"
+      POSTGRES_DB_PORT: "${POSTGRES_DB_PORT}"
+      KC_HOSTNAME: "${KC_HOSTNAME}"
+      KC_HOSTNAME_STRICT: "${KC_HOSTNAME_STRICT}"
+      KC_HOSTNAME_STRICT_HTTPS: "${KC_HOSTNAME_STRICT_HTTPS}"
+      KC_PROXY_HEADERS: "${KC_PROXY_HEADERS}"
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -k --head -fsS http://localhost:${KC_HTTP_PORT}/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  quotation-book-pgadmin:
+    build:
+      context: ../..
+      dockerfile: docker/QB.pgAdmin.Dockerfile
+      args:
+        DOCKER_REGISTRY: "${DOCKER_REGISTRY}"
+        PG_ADMIN_BASE_IMAGE: "${PG_ADMIN_BASE_IMAGE}"
+    image: quotation-book-pgadmin:latest
+    restart: unless-stopped
+    ports:
+      - "${PGADMIN_PORT}:80"
+    environment:
+      PG_ADMIN_USER: "${PG_ADMIN_USER}"
+      PG_ADMIN_PASSWORD: "${PG_ADMIN_PASSWORD}"
+      PGADMIN_DEFAULT_EMAIL: "${PG_ADMIN_USER}"
+      PGADMIN_DEFAULT_PASSWORD: "${PG_ADMIN_PASSWORD}"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:80/misc/ping >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  quotation-book-javascript-obs:
+    build:
+      context: ../..
+      dockerfile: docker/QB.Javascript.Obs.Dockerfile
+      args:
+        DOCKER_REGISTRY: "${DOCKER_REGISTRY}"
+        NODE_BASE_IMAGE: "${NODE_BASE_IMAGE}"
+    image: quotation-book-javascript-obs:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+
+  quotation-book-java-obs:
+    build:
+      context: ../..
+      dockerfile: docker/QB.Java.Obs.Dockerfile
+      args:
+        DOCKER_REGISTRY: "${DOCKER_REGISTRY}"
+        MAVEN_BASE_IMAGE: "${MAVEN_BASE_IMAGE}"
+        JDK_BASE_IMAGE: "${JDK_BASE_IMAGE}"
+        MAVEN_REPO_PARAM: "${MAVEN_REPO_PARAM}"
+    image: quotation-book-java-obs:latest
+    restart: unless-stopped
+    environment:
+      JAVA_HOST: "${JAVA_HOST}"
+      DB_HOST: "${POSTGRES_DB_HOST}"
+      DB_PORT: "${POSTGRES_DB_PORT}"
+      DB_NAME: "${POSTGRES_DB_NAME}"
+      DB_USER: "${POSTGRES_DB_USER}"
+      DB_PASSWORD: "${POSTGRES_DB_PASSWORD}"
+
+  quotation-book-dotnet-obs:
+    build:
+      context: ../..
+      dockerfile: docker/QB.Dotnet.Obs.Dockerfile
+      args:
+        DOCKER_REGISTRY: "${DOCKER_REGISTRY}"
+        DOTNET_BASE_IMAGE: "${DOTNET_BASE_IMAGE}"
+        DOTNET_RUNTIME_IMAGE: "${DOTNET_RUNTIME_IMAGE}"
+    image: quotation-book-dotnet-obs:latest
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -k -f https://localhost:1443/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  minio_data:

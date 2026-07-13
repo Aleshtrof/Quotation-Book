@@ -1,0 +1,208 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: quotation-book-frontend
+spec:
+  type: NodePort
+  selector:
+    app: quotation-book-frontend
+  ports:
+    - name: https-frontend
+      port: 8443
+      targetPort: 8443
+      nodePort: 30443
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quotation-book-backend
+spec:
+  selector:
+    app: quotation-book-backend
+  ports:
+    - name: backend
+      port: 5000
+      targetPort: 5000
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quotation-book-backend-worker
+spec:
+  selector:
+    app: quotation-book-backend-worker
+  ports:
+    - name: backend
+      port: 5000
+      targetPort: 5000
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quotation-book-postgres
+spec:
+  selector:
+    app: quotation-book-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quotation-book-redis
+spec:
+  selector:
+    app: quotation-book-redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+    - name: redis-tls
+      port: 6380
+      targetPort: 6380
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quotation-book-rabbitmq
+spec:
+  selector:
+    app: quotation-book-rabbitmq
+  ports:
+    - name: amqp
+      port: 5672
+      targetPort: 5672
+    - name: amqps
+      port: 5671
+      targetPort: 5671
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quotation-book-rabbitmq-management
+spec:
+  type: NodePort
+  selector:
+    app: quotation-book-rabbitmq
+  ports:
+    - name: management
+      port: 15672
+      targetPort: 15672
+      nodePort: 30672
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quotation-book-minio
+spec:
+  selector:
+    app: quotation-book-minio
+  ports:
+    - name: minio
+      port: 9000
+      targetPort: 9000
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quotation-book-minio-management
+spec:
+  type: NodePort
+  selector:
+    app: quotation-book-minio
+  ports:
+    - name: management
+      port: 9001
+      targetPort: 9001
+      nodePort: 30901
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quotation-book-keycloak
+spec:
+  selector:
+    app: quotation-book-keycloak
+  ports:
+    - name: http
+      port: 8081
+      targetPort: 8081
+    - name: https
+      port: 1443
+      targetPort: 1443
+    - name: https-external
+      port: 8443
+      targetPort: 8443
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quotation-book-pgadmin
+spec:
+  type: NodePort
+  selector:
+    app: quotation-book-pgadmin
+  ports:
+    - name: http
+      port: 5050
+      targetPort: 80
+      nodePort: 30050
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quotation-book-javascript-obs
+spec:
+  type: NodePort
+  selector:
+    app: quotation-book-javascript-obs
+  ports:
+    - name: https
+      port: 3000
+      targetPort: 3000
+      nodePort: 30300
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quotation-book-java-obs
+spec:
+  selector:
+    app: quotation-book-java-obs
+  ports:
+    - name: https
+      port: 8443
+      targetPort: 8443
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quotation-book-dotnet-obs
+spec:
+  selector:
+    app: quotation-book-dotnet-obs
+  ports:
+    - name: https
+      port: 1443
+      targetPort: 1443
+
+
+
+
+
+

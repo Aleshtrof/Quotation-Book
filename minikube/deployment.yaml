@@ -1,0 +1,923 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quotation-book-frontend
+spec:
+  selector:
+    matchLabels:
+      app: quotation-book-frontend
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: quotation-book-frontend
+    spec:
+      containers:
+      - name: quotation-book-frontend
+        image: quotation-book-frontend:latest
+        imagePullPolicy: Never
+        ports:
+        - name: https-frontend
+          containerPort: 8443
+        resources:
+          limits:
+            cpu: 250m
+            memory: 256Mi
+          requests:
+            cpu: 50m
+            memory: 128Mi
+        volumeMounts:
+          - name: backend-data
+            mountPath: /opt/app-root/src/static
+        livenessProbe:
+          exec:
+            command:
+            - curl
+            - -k
+            - -f
+            - https://localhost:8443/health
+          initialDelaySeconds: 20
+          timeoutSeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          exec:
+            command:
+            - curl
+            - -k
+            - -f
+            - https://localhost:8443/health
+          initialDelaySeconds: 20
+          timeoutSeconds: 10
+          periodSeconds: 30
+        envFrom:
+          - configMapRef:
+              name: quotation-book-frontend
+      volumes:
+        - name: backend-data
+          persistentVolumeClaim:
+            claimName: quotation-book-backend-data
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quotation-book-backend
+spec:
+  selector:
+    matchLabels:
+      app: quotation-book-backend
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: quotation-book-backend
+    spec:
+      containers:
+      - name: quotation-book-backend
+        image: quotation-book-backend:latest
+        command:
+          - /opt/app-root/src/docker-entrypoint.sh
+        args:
+          - backend
+        imagePullPolicy: Never
+        ports:
+        - name: backend
+          containerPort: 5000
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+          requests:
+            cpu: 200m
+            memory: 512Mi
+        volumeMounts:
+          - name: backend-data
+            mountPath: /opt/app-root/src/static
+        livenessProbe:
+          exec:
+            command:
+            - curl
+            - -k
+            - -f
+            - https://localhost:5000/check
+          initialDelaySeconds: 15
+          timeoutSeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - curl
+            - -k
+            - -f
+            - https://localhost:5000/check
+          initialDelaySeconds: 15
+          timeoutSeconds: 10
+          periodSeconds: 10
+        envFrom:
+          - configMapRef:
+              name: quotation-book-backend
+        env:
+          - name: DB_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: POSTGRES_DB_HOST
+          - name: DB_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: POSTGRES_DB_PORT
+          - name: REDIS_SSL
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: ENABLE_SSL_REDIS
+          - name: REDIS_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: REDIS_PORT_TLS
+          - name: RABBITMQ_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: RABBITMQ_PORT_SSL
+          - name: DB_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: POSTGRES_DB_NAME
+          - name: DB_USER
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: POSTGRES_DB_USER
+          - name: DB_PASSWORD
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: POSTGRES_DB_PASSWORD
+          - name: MINIO_ACCESS_KEY
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: MINIO_ROOT_USER
+          - name: MINIO_SECRET_KEY
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: MINIO_ROOT_PASSWORD
+      volumes:
+        - name: backend-data
+          persistentVolumeClaim:
+            claimName: quotation-book-backend-data
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quotation-book-backend-worker
+spec:
+  selector:
+    matchLabels:
+      app: quotation-book-backend-worker
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: quotation-book-backend-worker
+    spec:
+      containers:
+      - name: quotation-book-backend-worker
+        image: quotation-book-backend:latest
+        command:
+          - /opt/app-root/src/docker-entrypoint.sh
+        args:
+          - worker
+        imagePullPolicy: Never
+        ports:
+        - name: backend
+          containerPort: 5000
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+          requests:
+            cpu: 200m
+            memory: 512Mi
+        volumeMounts:
+          - name: backend-data
+            mountPath: /opt/app-root/src/static
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - pgrep -f worker.py || exit 1
+          initialDelaySeconds: 15
+          timeoutSeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - pgrep -f worker.py || exit 1
+          initialDelaySeconds: 15
+          timeoutSeconds: 10
+          periodSeconds: 30
+        envFrom:
+          - configMapRef:
+              name: quotation-book-backend
+        env:
+          - name: DB_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: POSTGRES_DB_HOST
+          - name: DB_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: POSTGRES_DB_PORT
+          - name: REDIS_SSL
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: ENABLE_SSL_REDIS
+          - name: REDIS_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: REDIS_PORT_TLS
+          - name: RABBITMQ_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: RABBITMQ_PORT_SSL
+          - name: DB_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: POSTGRES_DB_NAME
+          - name: DB_USER
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: POSTGRES_DB_USER
+          - name: DB_PASSWORD
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: POSTGRES_DB_PASSWORD
+          - name: MINIO_ACCESS_KEY
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: MINIO_ROOT_USER
+          - name: MINIO_SECRET_KEY
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-backend
+                key: MINIO_ROOT_PASSWORD
+      volumes:
+        - name: backend-data
+          persistentVolumeClaim:
+            claimName: quotation-book-backend-data
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quotation-book-postgres
+spec:
+  selector:
+    matchLabels:
+      app: quotation-book-postgres
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: quotation-book-postgres
+    spec:
+      containers:
+      - name: quotation-book-postgres
+        image: quotation-book-postgres:latest
+        imagePullPolicy: Never
+        ports:
+        - name: postgres
+          containerPort: 5432
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+          requests:
+            cpu: 300m
+            memory: 768Mi
+        volumeMounts:
+          - name: postgres-data
+            mountPath: /var/lib/postgresql/data
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - pg_isready -U postgres
+          initialDelaySeconds: 20
+          timeoutSeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - pg_isready -U postgres
+          initialDelaySeconds: 20
+          timeoutSeconds: 5
+          periodSeconds: 10
+        envFrom:
+          - configMapRef:
+              name: quotation-book-postgres
+        env:
+          - name: KEYCLOAK_DB_USER
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-keycloak
+                key: KC_DB_USERNAME
+          - name: KEYCLOAK_DB_PASSWORD
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-keycloak
+                key: KC_DB_PASSWORD
+          - name: KEYCLOAK_DB_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-keycloak
+                key: KC_DB_NAME
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: quotation-book-postgres-data
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quotation-book-redis
+spec:
+  selector:
+    matchLabels:
+      app: quotation-book-redis
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: quotation-book-redis
+    spec:
+      containers:
+      - name: quotation-book-redis
+        image: quotation-book-redis:latest
+        imagePullPolicy: Never
+        ports:
+        - name: redis
+          containerPort: 6379
+        - name: redis-tls
+          containerPort: 6380
+        resources:
+          limits:
+            cpu: 250m
+            memory: 256Mi
+          requests:
+            cpu: 50m
+            memory: 128Mi
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - redis-cli --pass ${REDIS_PASS} ping | grep PONG
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          periodSeconds: 20
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - redis-cli --pass ${REDIS_PASS} ping | grep PONG
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          periodSeconds: 20
+        envFrom:
+          - configMapRef:
+              name: quotation-book-redis
+        env:
+          - name: TLS_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-redis
+                key: REDIS_PORT_TLS
+          - name: ENABLE_SSL
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-redis
+                key: ENABLE_SSL_REDIS
+          - name: TLS_CERT_FILE
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-redis
+                key: TLS_CERT_FILE_REDIS
+          - name: TLS_KEY_FILE
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-redis
+                key: TLS_KEY_FILE_REDIS
+          - name: TLS_CA_CERT_FILE
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-redis
+                key: CA_CERTIFICATE
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quotation-book-rabbitmq
+spec:
+  selector:
+    matchLabels:
+      app: quotation-book-rabbitmq
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: quotation-book-rabbitmq
+    spec:
+      containers:
+      - name: quotation-book-rabbitmq
+        image: quotation-book-rabbitmq:latest
+        imagePullPolicy: Never
+        ports:
+        - name: management
+          containerPort: 15672
+        - name: amqp
+          containerPort: 5672
+        - name: amqps
+          containerPort: 5671
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        volumeMounts:
+          - name: rabbitmq-data
+            mountPath: /var/lib/rabbitmq
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - >
+              curl
+              -f
+              -u ${RABBITMQ_USER}:${RABBITMQ_PASSWORD}
+              http://localhost:${RABBITMQ_MANAGEMENT_PORT}/api/overview
+          initialDelaySeconds: 20
+          timeoutSeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - >
+              curl
+              -f
+              -u ${RABBITMQ_USER}:${RABBITMQ_PASSWORD}
+              http://localhost:${RABBITMQ_MANAGEMENT_PORT}/api/overview
+          initialDelaySeconds: 20
+          timeoutSeconds: 5
+          periodSeconds: 10
+        envFrom:
+          - configMapRef:
+              name: quotation-book-rabbitmq
+        env:
+          - name: ENABLE_SSL
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-rabbitmq
+                key: ENABLE_SSL_RABBITMQ
+          - name: SSL_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-rabbitmq
+                key: RABBITMQ_PORT_SSL
+          - name: CA_CERT_FILE
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-rabbitmq
+                key: CA_CERTIFICATE
+          - name: CERT_FILE
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-rabbitmq
+                key: RABBITMQ_CERT_FILE
+          - name: KEY_FILE
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-rabbitmq
+                key: RABBITMQ_KEY_FILE
+      volumes:
+        - name: rabbitmq-data
+          persistentVolumeClaim:
+            claimName: quotation-book-rabbitmq-data
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quotation-book-minio
+spec:
+  selector:
+    matchLabels:
+      app: quotation-book-minio
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: quotation-book-minio
+    spec:
+      containers:
+      - name: quotation-book-minio
+        image: quotation-book-minio:latest
+        imagePullPolicy: Never
+        ports:
+        - name: minio
+          containerPort: 9000
+        - name: management
+          containerPort: 9001
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        volumeMounts:
+          - name: minio-data
+            mountPath: /bitnami/minio/data
+        livenessProbe:
+          exec:
+            command:
+              - curl
+              - -k
+              - -f
+              - https://localhost:9000/minio/health/ready
+          initialDelaySeconds: 20
+          timeoutSeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+              - curl
+              - -k
+              - -f
+              - https://localhost:9000/minio/health/ready
+          initialDelaySeconds: 20
+          timeoutSeconds: 5
+          periodSeconds: 10
+        envFrom:
+          - configMapRef:
+              name: quotation-book-minio
+      volumes:
+        - name: minio-data
+          persistentVolumeClaim:
+            claimName: quotation-book-minio-data
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quotation-book-keycloak
+spec:
+  selector:
+    matchLabels:
+      app: quotation-book-keycloak
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: quotation-book-keycloak
+    spec:
+      initContainers:
+      - name: wait-for-postgres
+        image: quotation-book-postgres:latest
+        imagePullPolicy: Never
+        command:
+          - sh
+          - -c
+          - |
+            until pg_isready -h quotation-book-postgres -p 5432; do
+              echo "Waiting for postgres..."
+              sleep 2
+            done
+      containers:
+      - name: quotation-book-keycloak
+        image: quotation-book-keycloak:latest
+        imagePullPolicy: Never
+        ports:
+        - name: http
+          containerPort: 8081
+        - name: https
+          containerPort: 1443
+        - name: https-external
+          containerPort: 8443
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+          requests:
+            cpu: 300m
+            memory: 512Mi
+        startupProbe:
+          exec:
+            command:
+              - curl
+              - -k
+              - --head
+              - -fsS
+              - http://localhost:8081/health/ready
+          failureThreshold: 20
+          periodSeconds: 5
+        livenessProbe:
+          exec:
+            command:
+              - curl
+              - -k
+              - --head
+              - -fsS
+              - http://localhost:8081/health/ready
+          initialDelaySeconds: 20
+          timeoutSeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+              - curl
+              - -k
+              - --head
+              - -fsS
+              - http://localhost:8081/health/ready
+          initialDelaySeconds: 10
+          timeoutSeconds: 5
+          periodSeconds: 10
+        envFrom:
+          - configMapRef:
+              name: quotation-book-keycloak
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quotation-book-pgadmin
+spec:
+  selector:
+    matchLabels:
+      app: quotation-book-pgadmin
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: quotation-book-pgadmin
+    spec:
+      containers:
+      - name: quotation-book-pgadmin
+        image: quotation-book-pgadmin:latest
+        imagePullPolicy: Never
+        ports:
+        - name: http
+          containerPort: 80
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        startupProbe:
+          httpGet:
+            path: /misc/ping
+            port: 80
+          failureThreshold: 10
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /misc/ping
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /misc/ping
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        envFrom:
+          - configMapRef:
+              name: quotation-book-pgadmin
+        env:
+          - name: PGADMIN_DEFAULT_EMAIL
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-pgadmin
+                key: PG_ADMIN_USER
+          - name: PGADMIN_DEFAULT_PASSWORD
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-pgadmin
+                key: PG_ADMIN_PASSWORD
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quotation-book-javascript-obs
+spec:
+  selector:
+    matchLabels:
+      app: quotation-book-javascript-obs
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: quotation-book-javascript-obs
+    spec:
+      containers:
+      - name: quotation-book-javascript-obs
+        image: quotation-book-javascript-obs:latest
+        imagePullPolicy: Never
+        ports:
+        - name: https
+          containerPort: 3000
+        resources:
+          limits:
+            cpu: 250m
+            memory: 256Mi
+          requests:
+            cpu: 50m
+            memory: 128Mi
+        livenessProbe:
+          httpGet:
+            path: / 
+            port: 3000
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: / 
+            port: 3000
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          timeoutSeconds: 10
+          periodSeconds: 20
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quotation-book-java-obs
+spec:
+  selector:
+    matchLabels:
+      app: quotation-book-java-obs
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: quotation-book-java-obs
+    spec:
+      containers:
+      - name: quotation-book-java-obs
+        image: quotation-book-java-obs:latest
+        imagePullPolicy: Never
+        ports:
+        - name: https
+          containerPort: 8443
+        resources:
+          limits:
+            cpu: 250m
+            memory: 256Mi
+          requests:
+            cpu: 50m
+            memory: 128Mi
+        livenessProbe:
+          httpGet:
+            path: /metrics 
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /metrics 
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 30
+        env:
+          - name: JAVA_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-java-obs
+                key: JAVA_HOST
+          - name: DB_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-java-obs
+                key: POSTGRES_DB_HOST
+          - name: DB_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-java-obs
+                key: POSTGRES_DB_PORT
+          - name: DB_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-java-obs
+                key: POSTGRES_DB_NAME
+          - name: DB_USER
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-java-obs
+                key: POSTGRES_DB_USER
+          - name: DB_PASSWORD
+            valueFrom:
+              configMapKeyRef:
+                name: quotation-book-java-obs
+                key: POSTGRES_DB_PASSWORD
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quotation-book-dotnet-obs
+spec:
+  selector:
+    matchLabels:
+      app: quotation-book-dotnet-obs
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: quotation-book-dotnet-obs
+    spec:
+      containers:
+      - name: quotation-book-dotnet-obs
+        image: quotation-book-dotnet-obs:latest
+        imagePullPolicy: Never
+        ports:
+        - name: https
+          containerPort: 1443
+        resources:
+          limits:
+            cpu: 250m
+            memory: 256Mi
+          requests:
+            cpu: 50m
+            memory: 128Mi
+        livenessProbe:
+          exec:
+            command:
+            - curl
+            - -k
+            - -f
+            - https://localhost:1443/status
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          periodSeconds: 20
+        readinessProbe:
+          exec:
+            command:
+            - curl
+            - -k
+            - -f
+            - https://localhost:1443/status
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          periodSeconds: 20

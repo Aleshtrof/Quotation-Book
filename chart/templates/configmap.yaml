@@ -1,0 +1,223 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "qo.fullname" . }}-frontend
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+data:
+  BACKEND_HOST: "quotation-book-backend"
+  CERT_FQDN: "localhost"
+  KEYCLOAK_HOST: "quotation-book-keycloak"
+  KEYCLOAK_PORT: "8081"
+  KEYCLOAK_EXTERNAL_PORT: "8443"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "qo.fullname" . }}-backend
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+data:
+  PIP_INDEX_URL_PARAM: "https://pypi.org/simple/"
+  PIP_TRUSTED_HOST_PARAM: "pypi.org"
+  KEYCLOAK_CLIENT_ID: "quotation-book-client"
+  KEYCLOAK_CLIENT_SECRET: "QuotationBookSecret123!"
+  KEYCLOAK_REALM: "quotation-book"
+  KEYCLOAK_REDIRECT_URI: "https://localhost:8443/auth/callback"
+  FLASK_SECRET_KEY: "quotation-book-secret-key"
+  SESSION_COOKIE_SECURE: "True"
+  SESSION_COOKIE_HTTPONLY: "True"
+  SESSION_COOKIE_SAMESITE: "None"
+  USERINFO_CACHE_TTL: "20"
+  POSTGRES_CACHE_TTL: "10"
+  BACKEND_PORT: "5000"
+  CA_CERTIFICATE: "/etc/pki/ca-trust/source/anchors/sandbox_ca_root.crt"
+  BACKEND_TLS: "True"
+  BACKEND_SSL_KEY: "/opt/app-root/etc/private.key"
+  BACKEND_SSL_CERT: "/opt/app-root/etc/certificate.crt"
+  POSTGRES_SSL: "True"
+  MINIO_SSL_VERIFY: "True"
+  POSTGRES_DB_HOST: "quotation-book-postgres"              ## DB_HOST: "${POSTGRES_DB_HOST}" 
+  POSTGRES_DB_PORT: "5432"              ## DB_PORT: "${POSTGRES_DB_PORT}" 
+  ENABLE_SSL_REDIS: "true"    ##REDIS_SSL: "${ENABLE_SSL_REDIS}"
+  REDIS_HOST: "quotation-book-redis"
+  REDIS_PORT_TLS: "6380"   ## REDIS_PORT: "${REDIS_PORT_TLS}"
+  REDIS_PASS: "qpowejAskAKSncKSxZ"
+  KEYCLOAK_HOST: "quotation-book-keycloak"
+  KEYCLOAK_PORT: "8081"
+  RABBITMQ_USER: "gpn-admin"
+  RABBITMQ_PASSWORD: "changeme"
+  RABBITMQ_HOST: "quotation-book-rabbitmq"
+  RABBITMQ_PORT_SSL: "5671"     ## RABBITMQ_PORT: "${RABBITMQ_PORT_SSL}"
+  RABBITMQ_VHOST: "/"
+  POSTGRES_DB_NAME: "quotations"    ## DB_NAME: "${POSTGRES_DB_NAME}"
+  POSTGRES_DB_USER: "jason"    ## DB_USER: "${POSTGRES_DB_USER}"
+  POSTGRES_DB_PASSWORD: "P0aIIp44ESxTFNsb"    ## DB_PASSWORD: "${POSTGRES_DB_PASSWORD}"
+  MINIO_URL: "https://quotation-book-minio"
+  MINIO_PORT: "9000"
+  MINIO_ROOT_USER: "gpn-admin"     ## INIO_ACCESS_KEY: "${MINIO_ROOT_USER}"
+  MINIO_ROOT_PASSWORD: "changeme"    ##MINIO_SECRET_KEY: "${MINIO_ROOT_PASSWORD}"
+  MINIO_BUCKET_NAME: "quotation-book-library"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "qo.fullname" . }}-postgres
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+data:
+  POSTGRES_DB_NAME: "quotations"
+  POSTGRES_DB_USER: "jason"
+  POSTGRES_DB_PASSWORD: "P0aIIp44ESxTFNsb"
+  POSTGRES_SUPERUSER_PASSWORD: "P0aIIp44ESxTFNsb"
+  POSTGRES_DB_HOST: "quotation-book-postgres"
+  POSTGRES_DB_PORT: "5432"
+  PGDATA: "/var/lib/postgresql/data/pgdata"
+  POSTGRES_CA_CERT: "/opt/postgres/certs/sandbox_ca_root.crt"
+  POSTGRES_CERT_FILE: "/opt/postgres/certs/certificate.crt"
+  POSTGRES_KEY_FILE: "/opt/postgres/certs/private.key"
+  POSTGRES_ENABLE_SSL: "on"
+  POSTGRES_SUPERUSER_NAME: "gpn"
+  POSTGRES_USER: "postgres"                      ## error in the variable name in entrypoint.sh
+  POSTGRES_PASSWORD: "postgres"                  ## the variable missing from the .env file
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "qo.fullname" . }}-postgres-migration
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+data:
+  POSTGRES_DB_CONNECTION_ENCRYPT: "true"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "qo.fullname" . }}-redis
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+data:
+  REDIS_HOST: "quotation-book-redis"
+  REDIS_PORT: "6379"
+  REDIS_PASS: "qpowejAskAKSncKSxZ"
+  REDIS_PORT_TLS: "6380"                       ## error in the variable name in entrypoint.sh
+  ENABLE_SSL_REDIS: "true"                   ## error in the variable name in entrypoint.sh
+  TLS_CERT_FILE_REDIS: "/opt/redis/certs/certificate.crt"             ## error in the variable name in entrypoint.sh
+  TLS_KEY_FILE_REDIS: "/opt/redis/certs/private.key"               ## error in the variable name in entrypoint.sh
+  TLS_CLIENT_CERT_AUTH: "false"
+  CA_CERTIFICATE: "/etc/pki/ca-trust/source/anchors/sandbox_ca_root.crt"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "qo.fullname" . }}-rabbitmq
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+data:
+  RABBITMQ_HOST: "quotation-book-rabbitmq"
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_PORT_SSL: "5671"
+  RABBITMQ_MANAGEMENT_PORT: "15672"
+  RABBITMQ_USER: "gpn-admin"
+  RABBITMQ_PASSWORD: "changeme"
+  RABBITMQ_VHOST: "/"
+  ENABLE_SSL_RABBITMQ: "true"
+  RABBITMQ_CERT_FILE: "/opt/rabbitmq/certs/certificate.crt"
+  RABBITMQ_KEY_FILE: "/opt/rabbitmq/certs/private.key"
+  RABBITMQ_ADM_LOGIN: "gpn-admin"
+  RABBITMQ_ADM_PASSWORD: "changeme"
+  RABBITMQ_SENDER_LOGIN: "gpn-sender"
+  RABBITMQ_SENDER_PASSWORD: "changeme"
+  RABBITMQ_RECIPIENT_LOGIN: "gpn-recipient"
+  RABBITMQ_RECIPIENT_PASSWORD: "changeme"
+  DEFINITIONS_JSON_FILE: "/opt/rabbitmq/conf/definitions.json"
+  CA_CERTIFICATE: "/etc/pki/ca-trust/source/anchors/sandbox_ca_root.crt"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "qo.fullname" . }}-minio
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+data:
+  MINIO_ROOT_USER: "gpn-admin"
+  MINIO_ROOT_PASSWORD: "changeme"
+  MINIO_CONSOLE_PORT: "9001"
+  MINIO_API_PORT: "9000"
+  MINIO_PORT: "9000"
+  MINIO_CERTS_DIR: "/certs"
+  MINIO_SCHEME: "https"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "qo.fullname" . }}-minio-migration
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+data:
+  MINIO_URL: "https://quotation-book-minio"
+  MINIO_BUCKET_NAME: "quotation-book-library"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "qo.fullname" . }}-keycloak
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+data:
+  KC_DB: "postgres"
+  KC_DB_NAME: "keycloak"
+  KC_DB_USERNAME: "keycloak"
+  KC_DB_PASSWORD: "kqAJKDNakjsajkdSJAASJNX"
+  KC_DB_URL_PROPERTIES: "?sslmode=require"
+  KEYCLOAK_ADMIN: "gpn-admin"
+  KEYCLOAK_ADMIN_PASSWORD: "changeme"
+  KEYCLOAK_USER: "gpn-user"
+  KEYCLOAK_USER_PASSWORD: "changeme"
+  KEYCLOAK_EXTERNAL_HOST: "localhost"
+  KC_HTTP_ENABLED: "true"
+  KC_HTTP_PORT: "8081"
+  KC_HTTPS_PORT: "1443"
+  KC_PROXY: "edge"
+  CLIENT_URL: "https://localhost:8443"
+  JAVA_OPTS: "-Djava.io.tmpdir=/tmp"
+  POSTGRES_DB_HOST: "quotation-book-postgres"
+  POSTGRES_DB_PORT: "5432"
+  KC_HOSTNAME: "localhost:8443/keycloak"
+  KC_HOSTNAME_STRICT: "false"
+  KC_HOSTNAME_STRICT_HTTPS: "true"
+  KC_PROXY_HEADERS: "xforwarded"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "qo.fullname" . }}-pgadmin
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+data:
+  PG_ADMIN_USER: "admin@admin.com"
+  PG_ADMIN_PASSWORD: "4BlnshnaFqMxdJb8"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "qo.fullname" . }}-java-obs
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+data:
+  JAVA_HOST: "quotation-book-java-obs"
+  POSTGRES_DB_HOST: "quotation-book-postgres"
+  POSTGRES_DB_PORT: "5432"
+  POSTGRES_DB_NAME: "quotations"
+  POSTGRES_DB_USER: "jason"
+  POSTGRES_DB_PASSWORD: "P0aIIp44ESxTFNsb"

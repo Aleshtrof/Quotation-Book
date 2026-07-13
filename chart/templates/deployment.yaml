@@ -1,0 +1,911 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "qo.fullname" . }}-frontend
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: quotation-book-frontend
+  replicas: {{ .Values.application.replicaCount }}
+  revisionHistoryLimit: {{ .Values.application.revisionHistoryLimit }}
+  template:
+    metadata:
+      labels:
+        app: quotation-book-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: quotation-book-frontend:{{ .Values.frontend.image.tag | default "latest" }}
+        imagePullPolicy: {{ .Values.application.imagePullPolicy }}
+        ports:
+        - name: https-frontend
+          containerPort: 8443
+        {{- with .Values.frontend.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        volumeMounts:
+          - name: backend-data
+            mountPath: /opt/app-root/src/static
+        livenessProbe:
+          exec:
+            command:
+            - curl
+            - -k
+            - -f
+            - https://localhost:8443/health
+          initialDelaySeconds: 20
+          timeoutSeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          exec:
+            command:
+            - curl
+            - -k
+            - -f
+            - https://localhost:8443/health
+          initialDelaySeconds: 20
+          timeoutSeconds: 10
+          periodSeconds: 30
+        envFrom:
+          - configMapRef:
+              name: {{ include "qo.fullname" . }}-frontend
+      volumes:
+        - name: backend-data
+          persistentVolumeClaim:
+            claimName: {{ include "qo.fullname" . }}-backend-data
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "qo.fullname" . }}-backend
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: quotation-book-backend
+  replicas: {{ .Values.application.replicaCount }}
+  revisionHistoryLimit: {{ .Values.application.revisionHistoryLimit }}
+  template:
+    metadata:
+      labels:
+        app: quotation-book-backend
+    spec:
+      containers:
+      - name: backend
+        image: quotation-book-backend:{{ .Values.backend.image.tag | default "latest" }}
+        command:
+          - /opt/app-root/src/docker-entrypoint.sh
+        args:
+          - backend
+        imagePullPolicy: {{ .Values.application.imagePullPolicy }}
+        ports:
+        - name: backend
+          containerPort: 5000
+        {{- with .Values.backend.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        volumeMounts:
+          - name: backend-data
+            mountPath: /opt/app-root/src/static
+        livenessProbe:
+          exec:
+            command:
+            - curl
+            - -k
+            - -f
+            - https://localhost:5000/check
+          initialDelaySeconds: 15
+          timeoutSeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - curl
+            - -k
+            - -f
+            - https://localhost:5000/check
+          initialDelaySeconds: 15
+          timeoutSeconds: 10
+          periodSeconds: 10
+        envFrom:
+          - configMapRef:
+              name: {{ include "qo.fullname" . }}-backend
+        env:
+          - name: DB_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-backend
+                key: POSTGRES_DB_HOST
+          - name: DB_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-backend
+                key: POSTGRES_DB_PORT
+          - name: REDIS_SSL
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-backend
+                key: ENABLE_SSL_REDIS
+          - name: REDIS_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-backend
+                key: REDIS_PORT_TLS
+          - name: RABBITMQ_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-backend
+                key: RABBITMQ_PORT_SSL
+          - name: DB_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-backend
+                key: POSTGRES_DB_NAME
+          - name: DB_USER
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-backend
+                key: POSTGRES_DB_USER
+          - name: DB_PASSWORD
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-backend
+                key: POSTGRES_DB_PASSWORD
+          - name: MINIO_ACCESS_KEY
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-backend
+                key: MINIO_ROOT_USER
+          - name: MINIO_SECRET_KEY
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-backend
+                key: MINIO_ROOT_PASSWORD
+      volumes:
+        - name: backend-data
+          persistentVolumeClaim:
+            claimName: {{ include "qo.fullname" . }}-backend-data
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "qo.fullname" . }}-backend-worker
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: quotation-book-backend-worker
+  replicas: {{ .Values.application.replicaCount }}
+  revisionHistoryLimit: {{ .Values.application.revisionHistoryLimit }}
+  template:
+    metadata:
+      labels:
+        app: quotation-book-backend-worker
+    spec:
+      containers:
+      - name: backend-worker
+        image: quotation-book-backend:{{ .Values.backendWorker.image.tag | default "latest" }}
+        command:
+          - /opt/app-root/src/docker-entrypoint.sh
+        args:
+          - worker
+        imagePullPolicy: {{ .Values.application.imagePullPolicy }}
+        ports:
+        - name: backend
+          containerPort: 5000
+        {{- with .Values.backendWorker.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        volumeMounts:
+          - name: backend-data
+            mountPath: /opt/app-root/src/static
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - pgrep -f worker.py || exit 1
+          initialDelaySeconds: 15
+          timeoutSeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - pgrep -f worker.py || exit 1
+          initialDelaySeconds: 15
+          timeoutSeconds: 10
+          periodSeconds: 30
+        envFrom:
+          - configMapRef:
+              name: {{ include "qo.fullname" . }}-backend
+        env:
+          - name: DB_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-backend
+                key: POSTGRES_DB_HOST
+          - name: DB_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-backend
+                key: POSTGRES_DB_PORT
+          - name: REDIS_SSL
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-backend
+                key: ENABLE_SSL_REDIS
+          - name: REDIS_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-backend
+                key: REDIS_PORT_TLS
+          - name: RABBITMQ_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-backend
+                key: RABBITMQ_PORT_SSL
+          - name: DB_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-backend
+                key: POSTGRES_DB_NAME
+          - name: DB_USER
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-backend
+                key: POSTGRES_DB_USER
+          - name: DB_PASSWORD
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-backend
+                key: POSTGRES_DB_PASSWORD
+          - name: MINIO_ACCESS_KEY
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-backend
+                key: MINIO_ROOT_USER
+          - name: MINIO_SECRET_KEY
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-backend
+                key: MINIO_ROOT_PASSWORD
+      volumes:
+        - name: backend-data
+          persistentVolumeClaim:
+            claimName: {{ include "qo.fullname" . }}-backend-data
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "qo.fullname" . }}-postgres
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: quotation-book-postgres
+  replicas: {{ .Values.application.replicaCount }}
+  revisionHistoryLimit: {{ .Values.application.revisionHistoryLimit }}
+  template:
+    metadata:
+      labels:
+        app: quotation-book-postgres
+    spec:
+      containers:
+      - name: postgres
+        image: quotation-book-postgres:{{ .Values.postgres.image.tag | default "latest" }}
+        imagePullPolicy: {{ .Values.application.imagePullPolicy }}
+        ports:
+        - name: postgres
+          containerPort: 5432
+        {{- with .Values.postgres.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        volumeMounts:
+          - name: postgres-data
+            mountPath: /var/lib/postgresql/data
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - pg_isready -U postgres
+          initialDelaySeconds: 20
+          timeoutSeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - pg_isready -U postgres
+          initialDelaySeconds: 20
+          timeoutSeconds: 5
+          periodSeconds: 10
+        envFrom:
+          - configMapRef:
+              name: {{ include "qo.fullname" . }}-postgres
+        env:
+          - name: KEYCLOAK_DB_USER
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-keycloak
+                key: KC_DB_USERNAME
+          - name: KEYCLOAK_DB_PASSWORD
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-keycloak
+                key: KC_DB_PASSWORD
+          - name: KEYCLOAK_DB_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-keycloak
+                key: KC_DB_NAME
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: {{ include "qo.fullname" . }}-postgres-data
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "qo.fullname" . }}-redis
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: quotation-book-redis
+  replicas: {{ .Values.application.replicaCount }}
+  revisionHistoryLimit: {{ .Values.application.revisionHistoryLimit }}
+  template:
+    metadata:
+      labels:
+        app: quotation-book-redis
+    spec:
+      containers:
+      - name: redis
+        image: quotation-book-redis:{{ .Values.redis.image.tag | default "latest" }}
+        imagePullPolicy: {{ .Values.application.imagePullPolicy }}
+        ports:
+        - name: redis
+          containerPort: 6379
+        - name: redis-tls
+          containerPort: 6380
+        {{- with .Values.redis.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - redis-cli --pass ${REDIS_PASS} ping | grep PONG
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          periodSeconds: 20
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - redis-cli --pass ${REDIS_PASS} ping | grep PONG
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          periodSeconds: 20
+        envFrom:
+          - configMapRef:
+              name: {{ include "qo.fullname" . }}-redis
+        env:
+          - name: TLS_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-redis
+                key: REDIS_PORT_TLS
+          - name: ENABLE_SSL
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-redis
+                key: ENABLE_SSL_REDIS
+          - name: TLS_CERT_FILE
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-redis
+                key: TLS_CERT_FILE_REDIS
+          - name: TLS_KEY_FILE
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-redis
+                key: TLS_KEY_FILE_REDIS
+          - name: TLS_CA_CERT_FILE
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-redis
+                key: CA_CERTIFICATE
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "qo.fullname" . }}-rabbitmq
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: quotation-book-rabbitmq
+  replicas: {{ .Values.application.replicaCount }}
+  revisionHistoryLimit: {{ .Values.application.revisionHistoryLimit }}
+  template:
+    metadata:
+      labels:
+        app: quotation-book-rabbitmq
+    spec:
+      containers:
+      - name: rabbitmq
+        image: quotation-book-rabbitmq:{{ .Values.rabbitmq.image.tag | default "latest" }}
+        imagePullPolicy: {{ .Values.application.imagePullPolicy }}
+        ports:
+        - name: management
+          containerPort: 15672
+        - name: amqp
+          containerPort: 5672
+        - name: amqps
+          containerPort: 5671
+        {{- with .Values.rabbitmq.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        volumeMounts:
+          - name: rabbitmq-data
+            mountPath: /var/lib/rabbitmq
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - >
+              curl
+              -f
+              -u ${RABBITMQ_USER}:${RABBITMQ_PASSWORD}
+              http://localhost:${RABBITMQ_MANAGEMENT_PORT}/api/overview
+          initialDelaySeconds: 20
+          timeoutSeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - >
+              curl
+              -f
+              -u ${RABBITMQ_USER}:${RABBITMQ_PASSWORD}
+              http://localhost:${RABBITMQ_MANAGEMENT_PORT}/api/overview
+          initialDelaySeconds: 20
+          timeoutSeconds: 5
+          periodSeconds: 10
+        envFrom:
+          - configMapRef:
+              name: {{ include "qo.fullname" . }}-rabbitmq
+        env:
+          - name: ENABLE_SSL
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-rabbitmq
+                key: ENABLE_SSL_RABBITMQ
+          - name: SSL_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-rabbitmq
+                key: RABBITMQ_PORT_SSL
+          - name: CA_CERT_FILE
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-rabbitmq
+                key: CA_CERTIFICATE
+          - name: CERT_FILE
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-rabbitmq
+                key: RABBITMQ_CERT_FILE
+          - name: KEY_FILE
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-rabbitmq
+                key: RABBITMQ_KEY_FILE
+      volumes:
+        - name: rabbitmq-data
+          persistentVolumeClaim:
+            claimName: {{ include "qo.fullname" . }}-rabbitmq-data
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "qo.fullname" . }}-minio
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: quotation-book-minio
+  replicas: {{ .Values.application.replicaCount }}
+  revisionHistoryLimit: {{ .Values.application.revisionHistoryLimit }}
+  template:
+    metadata:
+      labels:
+        app: quotation-book-minio
+    spec:
+      containers:
+      - name: minio
+        image: quotation-book-minio:{{ .Values.minio.image.tag | default "latest" }}
+        imagePullPolicy: {{ .Values.application.imagePullPolicy }}
+        ports:
+        - name: minio
+          containerPort: 9000
+        - name: management
+          containerPort: 9001
+        {{- with .Values.minio.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        volumeMounts:
+          - name: minio-data
+            mountPath: /bitnami/minio/data
+        livenessProbe:
+          exec:
+            command:
+              - curl
+              - -k
+              - -f
+              - https://localhost:9000/minio/health/ready
+          initialDelaySeconds: 20
+          timeoutSeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+              - curl
+              - -k
+              - -f
+              - https://localhost:9000/minio/health/ready
+          initialDelaySeconds: 20
+          timeoutSeconds: 5
+          periodSeconds: 10
+        envFrom:
+          - configMapRef:
+              name: {{ include "qo.fullname" . }}-minio
+      volumes:
+        - name: minio-data
+          persistentVolumeClaim:
+            claimName: {{ include "qo.fullname" . }}-minio-data
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "qo.fullname" . }}-keycloak
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: quotation-book-keycloak
+  replicas: {{ .Values.application.replicaCount }}
+  revisionHistoryLimit: {{ .Values.application.revisionHistoryLimit }}
+  template:
+    metadata:
+      labels:
+        app: quotation-book-keycloak
+    spec:
+      initContainers:
+      - name: wait-for-postgres
+        image: quotation-book-postgres:{{ .Values.postgres.image.tag | default "latest" }}
+        imagePullPolicy: {{ .Values.application.imagePullPolicy }}
+        command:
+          - sh
+          - -c
+          - |
+            until pg_isready -h quotation-book-postgres -p 5432; do
+              echo "Waiting for postgres..."
+              sleep 2
+            done
+      containers:
+      - name: keycloak
+        image: quotation-book-keycloak:{{ .Values.keycloak.image.tag | default "latest" }}
+        imagePullPolicy: {{ .Values.application.imagePullPolicy }}
+        ports:
+        - name: http
+          containerPort: 8081
+        - name: https
+          containerPort: 1443
+        - name: https-external
+          containerPort: 8443
+        {{- with .Values.keycloak.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        startupProbe:
+          exec:
+            command:
+              - curl
+              - -k
+              - --head
+              - -fsS
+              - http://localhost:8081/health/ready
+          failureThreshold: 20
+          periodSeconds: 5
+        livenessProbe:
+          exec:
+            command:
+              - curl
+              - -k
+              - --head
+              - -fsS
+              - http://localhost:8081/health/ready
+          initialDelaySeconds: 20
+          timeoutSeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+              - curl
+              - -k
+              - --head
+              - -fsS
+              - http://localhost:8081/health/ready
+          initialDelaySeconds: 20
+          timeoutSeconds: 5
+          periodSeconds: 10
+        envFrom:
+          - configMapRef:
+              name: {{ include "qo.fullname" . }}-keycloak
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "qo.fullname" . }}-pgadmin
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: quotation-book-pgadmin
+  replicas: {{ .Values.application.replicaCount }}
+  revisionHistoryLimit: {{ .Values.application.revisionHistoryLimit }}
+  template:
+    metadata:
+      labels:
+        app: quotation-book-pgadmin
+    spec:
+      containers:
+      - name: pgadmin
+        image: quotation-book-pgadmin:{{ .Values.pgadmin.image.tag | default "latest" }}
+        imagePullPolicy: {{ .Values.application.imagePullPolicy }}
+        ports:
+        - name: http
+          containerPort: 80
+        {{- with .Values.pgadmin.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        startupProbe:
+          httpGet:
+            path: /misc/ping
+            port: 80
+          failureThreshold: 10
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /misc/ping
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /misc/ping
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        envFrom:
+          - configMapRef:
+              name: {{ include "qo.fullname" . }}-pgadmin
+        env:
+          - name: PGADMIN_DEFAULT_EMAIL
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-pgadmin
+                key: PG_ADMIN_USER
+          - name: PGADMIN_DEFAULT_PASSWORD
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-pgadmin
+                key: PG_ADMIN_PASSWORD
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "qo.fullname" . }}-javascript-obs
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: quotation-book-javascript-obs
+  replicas: {{ .Values.application.replicaCount }}
+  revisionHistoryLimit: {{ .Values.application.revisionHistoryLimit }}
+  template:
+    metadata:
+      labels:
+        app: quotation-book-javascript-obs
+    spec:
+      containers:
+      - name: javascript-obs
+        image: quotation-book-javascript-obs:{{ .Values.javascriptObs.image.tag | default "latest" }}
+        imagePullPolicy: {{ .Values.application.imagePullPolicy }}
+        ports:
+        - name: https
+          containerPort: 3000
+        {{- with .Values.javascriptObs.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        livenessProbe:
+          httpGet:
+            path: / 
+            port: 3000
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: / 
+            port: 3000
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          timeoutSeconds: 10
+          periodSeconds: 20
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "qo.fullname" . }}-java-obs
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: quotation-book-java-obs
+  replicas: {{ .Values.application.replicaCount }}
+  revisionHistoryLimit: {{ .Values.application.revisionHistoryLimit }}
+  template:
+    metadata:
+      labels:
+        app: quotation-book-java-obs
+    spec:
+      containers:
+      - name: java-obs
+        image: quotation-book-java-obs:{{ .Values.javaObs.image.tag | default "latest" }}
+        imagePullPolicy: {{ .Values.application.imagePullPolicy }}
+        ports:
+        - name: https
+          containerPort: 8443
+        {{- with .Values.javaObs.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /metrics 
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /metrics 
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 30
+        env:
+          - name: JAVA_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-java-obs
+                key: JAVA_HOST
+          - name: DB_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-java-obs
+                key: POSTGRES_DB_HOST
+          - name: DB_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-java-obs
+                key: POSTGRES_DB_PORT
+          - name: DB_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-java-obs
+                key: POSTGRES_DB_NAME
+          - name: DB_USER
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-java-obs
+                key: POSTGRES_DB_USER
+          - name: DB_PASSWORD
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "qo.fullname" . }}-java-obs
+                key: POSTGRES_DB_PASSWORD
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "qo.fullname" . }}-dotnet-obs
+  labels:
+    {{- include "qo.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: quotation-book-dotnet-obs
+  replicas: {{ .Values.application.replicaCount }}
+  revisionHistoryLimit: {{ .Values.application.revisionHistoryLimit }}
+  template:
+    metadata:
+      labels:
+        app: quotation-book-dotnet-obs
+    spec:
+      containers:
+      - name: dotnet-obs
+        image: quotation-book-dotnet-obs:{{ .Values.dotnetObs.image.tag | default "latest" }}
+        imagePullPolicy: {{ .Values.application.imagePullPolicy }}
+        ports:
+        - name: https
+          containerPort: 1443
+        {{- with .Values.dotnetObs.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        livenessProbe:
+          exec:
+            command:
+            - curl
+            - -k
+            - -f
+            - https://localhost:1443/status
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          periodSeconds: 20
+        readinessProbe:
+          exec:
+            command:
+            - curl
+            - -k
+            - -f
+            - https://localhost:1443/status
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          periodSeconds: 20

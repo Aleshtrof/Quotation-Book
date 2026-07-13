@@ -1,0 +1,7 @@
+apiVersion: v2
+name: quotation-book
+version: 0.1.0
+description: Helm chart for Quotation Book service
+type: application
+home: https://localhost:8443/
+appVersion: 1.0.0

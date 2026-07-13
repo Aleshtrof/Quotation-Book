@@ -1,0 +1,196 @@
+nameOverride: ""
+fullnameOverride: ""
+
+application:
+  replicaCount: 1
+  revisionHistoryLimit: 3
+  imagePullPolicy: Never
+
+pvc:
+  backendData:
+    size: 5Gi
+  postgresData:
+    size: 5Gi
+  rabbitmqData:
+    size: 5Gi
+  minioData:
+    size: 5Gi
+
+frontend:
+  image:
+    tag: latest
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+  service:
+    hostPort: 8443
+    containerPort: 8443
+
+backend:
+  image:
+    tag: latest
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+
+backendWorker:
+  image:
+    tag: latest
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+
+backendCollectstatic:
+  image:
+    tag: latest
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+backendCollectminio:
+  image:
+    tag: latest
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+postgres:
+  image:
+    tag: latest
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 300m
+      memory: 768Mi
+
+postgresMigration:
+  image:
+    tag: latest
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+redis:
+  image:
+    tag: latest
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+rabbitmq:
+  image:
+    tag: latest
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+minio:
+  image:
+    tag: latest
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+minioMigration:
+  image:
+    tag: latest
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+keycloak:
+  image:
+    tag: latest
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 300m
+      memory: 512Mi
+
+pgadmin:
+  image:
+    tag: latest
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+javascriptObs:
+  image:
+    tag: latest
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+javaObs:
+  image:
+    tag: latest
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+dotnetObs:
+  image:
+    tag: latest
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
