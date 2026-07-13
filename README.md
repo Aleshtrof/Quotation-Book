@@ -1,5 +1,6 @@
-Выполненные изменения:
+Выполненны изменения:
 1. Изменена переменная в JAVA_OPTS .env
+
 | было | стало |
 |-------------------------------------------------|---------------------------------|
 | JAVA_OPTS: "${JAVA_OPTS} -Djava.io.tmpdir=/tmp" | JAVA_OPTS=-Djava.io.tmpdir=/tmp |
@@ -7,6 +8,7 @@
 
 
 2. Заменён образ в dockerfile QB.Java.Obs.Dockerfile
+
 | было | стало |
 |--------------------------------------------------------|------------------------------------------------|
 | FROM ${DOCKER_REGISTRY}/${MAVEN_BASE_IMAGE} AS builder | FROM maven:3.9.6-eclipse-temurin-11 AS builder |
