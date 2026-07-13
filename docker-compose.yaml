@@ -255,8 +255,8 @@ services:
       KEYCLOAK_DB_USER: "${KC_DB_USERNAME}"          ## error in the variable name in entrypoint.sh
       KEYCLOAK_DB_PASSWORD: "${KC_DB_PASSWORD}"      ## error in the variable name in entrypoint.sh
       KEYCLOAK_DB_NAME: "${KC_DB_NAME}"              ## error in the variable name in entrypoint.sh
-      POSTGRES_USER: "postgres"                      ## error in the variable name in entrypoint.sh
-      POSTGRES_PASSWORD: "postgres"                  ## the variable missing from the .env file
+      POSTGRES_USER: "${POSTGRES_USER}"              ## error in the variable name in entrypoint.sh
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"      ## the variable missing from the .env file
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -293,8 +293,8 @@ services:
       KEYCLOAK_DB_USER: "${KC_DB_USERNAME}"          ## error in the variable name in entrypoint.sh
       KEYCLOAK_DB_PASSWORD: "${KC_DB_PASSWORD}"      ## error in the variable name in entrypoint.sh
       KEYCLOAK_DB_NAME: "${KC_DB_NAME}"              ## error in the variable name in entrypoint.sh
-      POSTGRES_USER: "postgres"                      ## error in the variable name in entrypoint.sh
-      POSTGRES_PASSWORD: "postgres"                  ## the variable missing from the .env file
+      POSTGRES_USER: "${POSTGRES_USER}"              ## error in the variable name in entrypoint.sh
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"      ## the variable missing from the .env file
       POSTGRES_DB_CONNECTION_ENCRYPT: "${POSTGRES_DB_CONNECTION_ENCRYPT}"
 
   quotation-book-redis:
