@@ -51,7 +51,7 @@
                 continue;
             }
 
-**Причина:** Исходный код выполнял подключение к postgres по http '{ "PostgreSQL", "http://quotation-book-postgres:5432" }'
+**Причина:** Исходный код выполнял подключение к postgres по http `{ "PostgreSQL", "http://quotation-book-postgres:5432" }`
 
 ### 4. В `.env` добавлены стандартные переменные для сервиса quotation-book-postgres  
 POSTGRES_USER=postgres  
