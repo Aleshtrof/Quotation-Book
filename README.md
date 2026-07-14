@@ -134,6 +134,8 @@ KC_PROXY_HEADERS - позволяет принимать заголовки от
 | Было | Стало |
 |------|--------|
 | <pre>location /keycloak/ {<br>    proxy_pass https://${KEYCLOAK_HOST}:${KEYCLOAK_PORT}/;<br>}</pre> | <pre>location /keycloak/ {<br>    proxy_pass http://${KEYCLOAK_HOST}:${KEYCLOAK_PORT}/;<br>}</pre> |
+| <pre>location /static/ {<br>    alias /opt/app-root/static/;<br>}</pre> | <pre>location /static/ {<br>    alias /opt/app-root/src/static/;<br>}</pre> |
+
 
 
 **Причина:**
