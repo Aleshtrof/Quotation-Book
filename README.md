@@ -1,5 +1,5 @@
 Выполненны изменения:
-1\. Изменена переменная в `.env`
+### 1. Изменена переменная в `.env`
 
 | было | стало |
 |---------------------------------------------------|-----------------------------------|
@@ -8,7 +8,7 @@
 **Причина:** Некорректный формат переменной
 
 
-2\. Заменён образ в dockerfile `QB.Java.Obs.Dockerfile`
+### 2. Заменён образ в dockerfile `QB.Java.Obs.Dockerfile`
 
 | было | стало |
 |--------------------------------------------------------|------------------------------------------------|
@@ -20,7 +20,7 @@
 
 **Причина:** Репозиторий с образом недоступен по адресу `quay.io/dev_zone/redos/ubi8/maven-396`  
 
-3\. Healtcheck из образа `QB.Dotnet.Obs.Dockerfile` переписан через docker compose  
+### 3. Healtcheck из образа `QB.Dotnet.Obs.Dockerfile` переписан через docker compose  
 **Причина:** Некорректный endpoint: вместо `/health` должен быть `/status`
 
 3.1 Изменён код в файле `Program.cs` для сервиса quotation-book-dotnet-obs
@@ -51,7 +51,7 @@
 
 **Причина:** Исходный код выполнял подключение к postgres по http '{ "PostgreSQL", "http://quotation-book-postgres:5432" }'
 
-4\. В `.env` добавлены стандартные переменные для сервиса quotation-book-postgres  
+### 4. В `.env` добавлены стандартные переменные для сервиса quotation-book-postgres  
 POSTGRES_USER=postgres  
 POSTGRES_PASSWORD=postgres
 
@@ -64,7 +64,7 @@ POSTGRES_PASSWORD=postgres
 
 **Причина:** Несоответствие переменных в `docker-entrypoint.sh` и файле `.env`
 
-5\. В `.env` добавлены стандартные переменные для сервиса quotation-book-keycloak
+### 5. В `.env` добавлены стандартные переменные для сервиса quotation-book-keycloak
 KC_HOSTNAME=localhost:8443/keycloak  
 KC_HOSTNAME_STRICT=false  
 KC_HOSTNAME_STRICT_HTTPS=true  
@@ -90,13 +90,13 @@ KC_PROXY_HEADERS - позволяет принимать заголовки от
 
 **Причина:** Keycloack не слушает порт 1443, в образе зашит порт 8081
 
-6\. В docker compose добавлены стандартные переменные для сервиса quotation-book-pgadmin  
+### 6. В docker compose добавлены стандартные переменные для сервиса quotation-book-pgadmin  
       PGADMIN_DEFAULT_EMAIL: "${PG_ADMIN_USER}"  
       PGADMIN_DEFAULT_PASSWORD: "${PG_ADMIN_PASSWORD}"
 
 Причина: Переменные отсутсовали в файле `.env`
 
-7\. В docker compose добавлены стандартные переменные для сервиса quotation-book-rabbitmq
+### 7. В docker compose добавлены стандартные переменные для сервиса quotation-book-rabbitmq
       ENABLE_SSL: "${ENABLE_SSL_RABBITMQ}"
       SSL_PORT: "${RABBITMQ_PORT_SSL}"
       CA_CERT_FILE: "${CA_CERTIFICATE}"
@@ -105,7 +105,7 @@ KC_PROXY_HEADERS - позволяет принимать заголовки от
 
 **Причина:** Переменные отсутсовали в файле `.env`. Переменные используются в docker-образе и влияют на подключение сервиса quotation-book-backend-worker
 
-8\. Изменён файл конфигурации nginx `default-location-conf.template` для сервиса quotation-book-frontend
+### 8. Изменён файл конфигурации nginx `default-location-conf.template` для сервиса quotation-book-frontend
 
 | Было | Стало |
 |------|--------|
@@ -116,7 +116,7 @@ KC_PROXY_HEADERS - позволяет принимать заголовки от
 1. Keycloak настроен на работу по протоколу http на 8081 порту
 2. Ошибка в alias, адрес директории отличается от dockerfile `QB.Frontend.Dockerfile`  
 
-9\. Изменены маршруты аутентификации в файле `auth.py`
+### 9. Изменены маршруты аутентификации в файле `auth.py`
 
 | было | стало |
 |-------|------|
@@ -126,7 +126,7 @@ KC_PROXY_HEADERS - позволяет принимать заголовки от
 
 **Причина:** Необходимо для корректного формирования url для keycloak по http
 
-10\. В docker compose переопределена переменная `REDIS_PORT` для сервиса quotation-book-backend-worker  
+### 10. В docker compose переопределена переменная `REDIS_PORT` для сервиса quotation-book-backend-worker  
       TLS_PORT: "${REDIS_PORT_TLS}"  
       ENABLE_SSL: "${ENABLE_SSL_REDIS}"  
       TLS_CERT_FILE: "${TLS_CERT_FILE_REDIS}"  
@@ -136,13 +136,13 @@ KC_PROXY_HEADERS - позволяет принимать заголовки от
 
 **Причина:** Несоответствие переменных в `docker-entrypoint.sh` и файле `.env`
 
-11\. В docker compose переопределены переменные для сервисов quotation-book-backend-  
+### 11. В docker compose переопределены переменные для сервисов quotation-book-backend-  
       DB_HOST: "${POSTGRES_DB_HOST}"  
       DB_PORT: "${POSTGRES_DB_PORT}"   
 
 Причина: Несоответствие переменных в `docker-entrypoint.sh` и файле `.env`
 
-12\. В docker compose переопределены переменные для сервиса quotation-book-java-obs  
+### 12. В docker compose переопределены переменные для сервиса quotation-book-java-obs  
       DB_HOST: "${POSTGRES_DB_HOST}"  
       DB_PORT: "${POSTGRES_DB_PORT}"  
       DB_NAME: "${POSTGRES_DB_NAME}"  
