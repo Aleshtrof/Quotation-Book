@@ -20,7 +20,7 @@
 
 **Причина:** Репозиторий с образом недоступен по адресу `quay.io/dev_zone/redos/ubi8/maven-396`  
 
-### 3. Healtcheck из образа `QB.Dotnet.Obs.Dockerfile` переписан через docker compose  
+### 3. Healthcheck из образа `QB.Dotnet.Obs.Dockerfile` переписан через docker compose  
 **Причина:** Некорректный endpoint: вместо `/health` должен быть `/status`
 
 3.1 Изменён код в файле `Program.cs` для сервиса quotation-book-dotnet-obs
@@ -150,3 +150,11 @@ KC_PROXY_HEADERS - позволяет принимать заголовки от
       DB_PASSWORD: "${POSTGRES_DB_PASSWORD}"
 
 Причина: Несоответствие переменных в `MetricsApp.java` и файле `.env`
+
+
+## Адреса сервисов
+https://localhost:8443/
+http://localhost:15672/
+https://localhost:9001/
+http://localhost:5050/
+
