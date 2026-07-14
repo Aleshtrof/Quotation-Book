@@ -130,6 +130,13 @@ KC_PROXY_HEADERS - позволяет принимать заголовки от
     alias /opt/app-root/static/</pre> | <pre>location /static/ {
     alias /opt/app-root/src/static/</pre> |
 
+---
+| Было | Стало |
+|------|--------|
+| <pre>line1
+line2</pre> | <pre>line1
+line2</pre> |
+
 
 **Причина:**
 1. Keycloak настроен на работу по протоколу http на 8081 порту
