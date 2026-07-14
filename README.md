@@ -1,30 +1,30 @@
 Выполненны изменения:
-1. Изменена переменная в JAVA_OPTS .env
+1. Изменена переменная в '.env'
 
 | было | стало |
 |---------------------------------------------------|-----------------------------------|
 | 'JAVA_OPTS: "${JAVA_OPTS} -Djava.io.tmpdir=/tmp"' | 'JAVA_OPTS=-Djava.io.tmpdir=/tmp' |
-Причина: Некорректный формат переменной
+
+**Причина:** Некорректный формат переменной
 
 
-2. Заменён образ в dockerfile QB.Java.Obs.Dockerfile
+2. Заменён образ в dockerfile 'QB.Java.Obs.Dockerfile'
 
 | было | стало |
 |--------------------------------------------------------|------------------------------------------------|
 | FROM ${DOCKER_REGISTRY}/${MAVEN_BASE_IMAGE} AS builder | FROM maven:3.9.6-eclipse-temurin-11 AS builder |
 
-2.1 Зкоментированы комнады в dockerfile QB.Java.Obs.Dockerfile
-#COPY ./docker/certs /etc/pki/ca-trust/source/anchors
-#update-ca-trust
+2.1 Зкоментированы комнады в dockerfile QB.Java.Obs.Dockerfile  
+#COPY ./docker/certs /etc/pki/ca-trust/source/anchors  
+#update-ca-trust  
 
-Причина: Репозиторий с образом недоступен по адресу quay.io/dev_zone/redos/ubi8/maven-396
+**Причина:** Репозиторий с образом недоступен по адресу quay.io/dev_zone/redos/ubi8/maven-396
 
-3. Healtcheck из образа QB.Dotnet.Obs.Dockerfile переписан через docker compose
-Причина: Некорректный endpoint: вместо /health должен быть /status
-
+3. Healtcheck из образа 'QB.Dotnet.Obs.Dockerfile' переписан через docker compose  
+**Причина:** Некорректный endpoint: вместо /health должен быть /status
 
 3.1 Изменён код в файле Program.cs для сервиса quotation-book-dotnet-obs
-            // --- ДОБАВЛЕНО: PostgreSQL проверяем через TCP ---
+'''            // --- ДОБАВЛЕНО: PostgreSQL проверяем через TCP ---
             if (service.Key == "PostgreSQL")
             {
                 try
@@ -47,20 +47,21 @@
 
                 continue;
             }
+'''
+**Причина:** Исходный код выполнял подключение к postgres по http { "PostgreSQL", "http://quotation-book-postgres:5432" }
 
-Причина: Исходный код выполнял подключение к postgres по http { "PostgreSQL", "http://quotation-book-postgres:5432" }
-
-4. В .env добавлены стандартные переменные для сервиса quotation-book-postgres
-POSTGRES_USER=postgres
+4. В '.env' добавлены стандартные переменные для сервиса quotation-book-postgres  
+POSTGRES_USER=postgres  
 POSTGRES_PASSWORD=postgres
-Причина: Переменные отсутсовали в файле .env
 
-4.1 В docker compose переопределены переменные для сервисов quotation-book-postgres*
-      KEYCLOAK_DB_USER: "${KC_DB_USERNAME}"
-      KEYCLOAK_DB_PASSWORD: "${KC_DB_PASSWORD}"
+**Причина:** Переменные отсутсовали в файле .env
+
+4.1 В docker compose переопределены переменные для сервисов quotation-book-postgres  
+      KEYCLOAK_DB_USER: "${KC_DB_USERNAME}"  
+      KEYCLOAK_DB_PASSWORD: "${KC_DB_PASSWORD}"  
       KEYCLOAK_DB_NAME: "${KC_DB_NAME}"
 
-Причина: Несоответствие переменных в docker-entrypoint.sh и файле .env
+**Причина:** Несоответствие переменных в docker-entrypoint.sh и файле .env
 
 5. В .env добавлены стандартные переменные для сервиса quotation-book-keycloak
 KC_HOSTNAME=localhost:8443/keycloak
