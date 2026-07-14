@@ -3,7 +3,7 @@
 
 | было | стало |
 |---------------------------------------------------|-----------------------------------|
-| 'JAVA_OPTS: "${JAVA_OPTS} -Djava.io.tmpdir=/tmp"' | 'JAVA_OPTS=-Djava.io.tmpdir=/tmp' |
+| `JAVA_OPTS: "${JAVA_OPTS} -Djava.io.tmpdir=/tmp"` | `JAVA_OPTS=-Djava.io.tmpdir=/tmp` |
 
 **Причина:** Некорректный формат переменной
 
@@ -24,6 +24,7 @@
 **Причина:** Некорректный endpoint: вместо `/health` должен быть `/status`
 
 3.1 Изменён код в файле `Program.cs` для сервиса quotation-book-dotnet-obs
+
 '''
             // --- ДОБАВЛЕНО: PostgreSQL проверяем через TCP ---
             if (service.Key == "PostgreSQL")
@@ -72,42 +73,41 @@ KC_HOSTNAME_STRICT_HTTPS=true
 KC_PROXY_HEADERS=xforwarded
 
 **Причина:** Переменные необходимы для корректной работы keycloak за обратным прокси.  
-KC_HOSTNAME - определяет внешний адрес. доступный пользователю  
-KC_HOSTNAME_STRICT - разрешает принимать запросы, даже если значение заголовка Host не совпадает с KC_HOSTNAME (при работе через обратный прокси)  
-KC_HOSTNAME_STRICT_HTTPS - позволяет считать внешний адрес HTTPS и генерировать ссылки с протоколом https.  
-KC_PROXY_HEADERS - позволяет принимать заголовки от nginx
+- KC_HOSTNAME - определяет внешний адрес. доступный пользователю  
+- KC_HOSTNAME_STRICT - разрешает принимать запросы, даже если значение заголовка Host не совпадает с KC_HOSTNAME (при работе через обратный прокси)  
+- KC_HOSTNAME_STRICT_HTTPS - позволяет считать внешний адрес HTTPS и генерировать ссылки с протоколом https.  
+- KC_PROXY_HEADERS - позволяет принимать заголовки от nginx
 
-5.1 Изменено значение переменной KC_HTTP_ENABLED
+5.1 Изменено значение переменной `KC_HTTP_ENABLED`
 | было | стало |
 |-------|------|
 | false | true |
 
-Причина: Необходимо для принятия http запросов от nginx
+**Причина:** Необходимо для принятия http запросов от nginx
 
-5.2 Изменено значение переменной KEYCLOAK_PORT
+5.2 Изменено значение переменной `KEYCLOAK_PORT`
 | было | стало |
 |------|-------|
 | 1443 | 8081 |
 
-Причина: Keycloack не слушает порт 1443, в образе зашит порт 8081
+**Причина:** Keycloack не слушает порт 1443, в образе зашит порт 8081
 
 6. В docker compose добавлены стандартные переменные для сервиса quotation-book-pgadmin
-      PGADMIN_DEFAULT_EMAIL: "${PG_ADMIN_USER}"
-      PGADMIN_DEFAULT_PASSWORD: "${PG_ADMIN_PASSWORD}"
+-      PGADMIN_DEFAULT_EMAIL: "${PG_ADMIN_USER}"
+-      PGADMIN_DEFAULT_PASSWORD: "${PG_ADMIN_PASSWORD}"
 
-Причина: Переменные отсутсовали в файле .env
+Причина: Переменные отсутсовали в файле `.env`
 
 7. В docker compose добавлены стандартные переменные для сервиса quotation-book-rabbitmq
-В .env отсутствовали переменные, которые используются в образе и влияют на подключение quotation-book-backend-worker
-      ENABLE_SSL: "${ENABLE_SSL_RABBITMQ}"
-      SSL_PORT: "${RABBITMQ_PORT_SSL}"
-      CA_CERT_FILE: "${CA_CERTIFICATE}"
-      CERT_FILE: "${RABBITMQ_CERT_FILE}"
-      KEY_FILE: "${RABBITMQ_KEY_FILE}"
+-      ENABLE_SSL: "${ENABLE_SSL_RABBITMQ}"
+-      SSL_PORT: "${RABBITMQ_PORT_SSL}"
+-      CA_CERT_FILE: "${CA_CERTIFICATE}"
+-      CERT_FILE: "${RABBITMQ_CERT_FILE}"
+-      KEY_FILE: "${RABBITMQ_KEY_FILE}"
 
-Причина: Переменные отсутсовали в файле .env. Переменные используются в docker-образе и влияют на подключение сервиса quotation-book-backend-worker
+**Причина:** Переменные отсутсовали в файле `.env`. Переменные используются в docker-образе и влияют на подключение сервиса quotation-book-backend-worker
 
-8. Изменён файл конфигурации nginx "default-location-conf.template" для сервиса quotation-book-frontend
+8. Изменён файл конфигурации nginx `default-location-conf.template` для сервиса quotation-book-frontend
 | было | стало |
 |----------------------------------------------------------|------------------------|
 | location /keycloak/ {
@@ -118,9 +118,24 @@ KC_PROXY_HEADERS - позволяет принимать заголовки от
     alias /opt/app-root/static/ | location /static/ {
     alias /opt/app-root/src/static/ |
 
-Причина:
+| Было | Стало |
+|------|--------|
+| <pre>location /keycloak/ {
+    proxy_pass https://${KEYCLOAK_HOST}:${KEYCLOAK_PORT}/;
+}</pre> | <pre>location /keycloak/ {
+    proxy_pass http://${KEYCLOAK_HOST}:${KEYCLOAK_PORT}/;
+}</pre> |
+
+
+
+| <pre>location /static/ {
+    alias /opt/app-root/static/</pre> | <pre>location /static/ {
+    alias /opt/app-root/src/static/</pre> |
+
+
+**Причина:**
 1. Keycloak настроен на работу по протоколу http на 8081 порту
-2. Ошибка в alias, адрес директории отличается от dockerfile QB.Frontend.Dockerfile
+2. Ошибка в alias, адрес директории отличается от dockerfile `QB.Frontend.Dockerfile`
 
 9. Изменены маршруты аутентификации в файле auth.py
 | было | стало |
