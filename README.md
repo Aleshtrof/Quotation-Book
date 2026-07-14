@@ -1,5 +1,5 @@
 Выполненны изменения:
-1. Изменена переменная в '.env'
+1. Изменена переменная в `.env`
 
 | было | стало |
 |---------------------------------------------------|-----------------------------------|
@@ -8,23 +8,24 @@
 **Причина:** Некорректный формат переменной
 
 
-2. Заменён образ в dockerfile 'QB.Java.Obs.Dockerfile'
+2. Заменён образ в dockerfile `QB.Java.Obs.Dockerfile`
 
 | было | стало |
 |--------------------------------------------------------|------------------------------------------------|
 | FROM ${DOCKER_REGISTRY}/${MAVEN_BASE_IMAGE} AS builder | FROM maven:3.9.6-eclipse-temurin-11 AS builder |
 
-2.1 Зкоментированы комнады в dockerfile QB.Java.Obs.Dockerfile  
+2.1 Зкоментированы комнады в dockerfile `QB.Java.Obs.Dockerfile`  
 #COPY ./docker/certs /etc/pki/ca-trust/source/anchors  
 #update-ca-trust  
 
-**Причина:** Репозиторий с образом недоступен по адресу quay.io/dev_zone/redos/ubi8/maven-396
+**Причина:** Репозиторий с образом недоступен по адресу `quay.io/dev_zone/redos/ubi8/maven-396`  
 
-3. Healtcheck из образа 'QB.Dotnet.Obs.Dockerfile' переписан через docker compose  
-**Причина:** Некорректный endpoint: вместо /health должен быть /status
+3. Healtcheck из образа `QB.Dotnet.Obs.Dockerfile` переписан через docker compose  
+**Причина:** Некорректный endpoint: вместо `/health` должен быть `/status`
 
-3.1 Изменён код в файле Program.cs для сервиса quotation-book-dotnet-obs
-'''            // --- ДОБАВЛЕНО: PostgreSQL проверяем через TCP ---
+3.1 Изменён код в файле `Program.cs` для сервиса quotation-book-dotnet-obs
+'''
+            // --- ДОБАВЛЕНО: PostgreSQL проверяем через TCP ---
             if (service.Key == "PostgreSQL")
             {
                 try
@@ -48,31 +49,32 @@
                 continue;
             }
 '''
-**Причина:** Исходный код выполнял подключение к postgres по http { "PostgreSQL", "http://quotation-book-postgres:5432" }
 
-4. В '.env' добавлены стандартные переменные для сервиса quotation-book-postgres  
+**Причина:** Исходный код выполнял подключение к postgres по http '{ "PostgreSQL", "http://quotation-book-postgres:5432" }'
+
+4. В `.env` добавлены стандартные переменные для сервиса quotation-book-postgres  
 POSTGRES_USER=postgres  
 POSTGRES_PASSWORD=postgres
 
-**Причина:** Переменные отсутсовали в файле .env
+**Причина:** Переменные отсутсовали в файле `.env`
 
 4.1 В docker compose переопределены переменные для сервисов quotation-book-postgres  
       KEYCLOAK_DB_USER: "${KC_DB_USERNAME}"  
       KEYCLOAK_DB_PASSWORD: "${KC_DB_PASSWORD}"  
       KEYCLOAK_DB_NAME: "${KC_DB_NAME}"
 
-**Причина:** Несоответствие переменных в docker-entrypoint.sh и файле .env
+**Причина:** Несоответствие переменных в `docker-entrypoint.sh` и файле `.env`
 
-5. В .env добавлены стандартные переменные для сервиса quotation-book-keycloak
-KC_HOSTNAME=localhost:8443/keycloak
-KC_HOSTNAME_STRICT=false
-KC_HOSTNAME_STRICT_HTTPS=true
+5. В `.env` добавлены стандартные переменные для сервиса quotation-book-keycloak
+KC_HOSTNAME=localhost:8443/keycloak  
+KC_HOSTNAME_STRICT=false  
+KC_HOSTNAME_STRICT_HTTPS=true  
 KC_PROXY_HEADERS=xforwarded
 
-Причина: Переменные необходимы для корректной работы keycloak за обратным прокси.
-KC_HOSTNAME - определяет внешний адрес. доступный пользователю
-KC_HOSTNAME_STRICT - разрешает принимать запросы, даже если значение заголовка Host не совпадает с KC_HOSTNAME (при работе через обратный прокси)
-KC_HOSTNAME_STRICT_HTTPS - позволяет считать внешний адрес HTTPS и генерировать ссылки с протоколом https.
+**Причина:** Переменные необходимы для корректной работы keycloak за обратным прокси.  
+KC_HOSTNAME - определяет внешний адрес. доступный пользователю  
+KC_HOSTNAME_STRICT - разрешает принимать запросы, даже если значение заголовка Host не совпадает с KC_HOSTNAME (при работе через обратный прокси)  
+KC_HOSTNAME_STRICT_HTTPS - позволяет считать внешний адрес HTTPS и генерировать ссылки с протоколом https.  
 KC_PROXY_HEADERS - позволяет принимать заголовки от nginx
 
 5.1 Изменено значение переменной KC_HTTP_ENABLED
