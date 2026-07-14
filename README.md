@@ -106,37 +106,11 @@ KC_PROXY_HEADERS - позволяет принимать заголовки от
 **Причина:** Переменные отсутсовали в файле `.env`. Переменные используются в docker-образе и влияют на подключение сервиса quotation-book-backend-worker
 
 8. Изменён файл конфигурации nginx `default-location-conf.template` для сервиса quotation-book-frontend
-| было | стало |
-|----------------------------------------------------------|------------------------|
-| location /keycloak/ {
-    proxy_pass https://${KEYCLOAK_HOST}:${KEYCLOAK_PORT}/; | location /keycloak/ {
-    proxy_pass http://${KEYCLOAK_HOST}:${KEYCLOAK_PORT}/; |
 
-| location /static/ {
-    alias /opt/app-root/static/ | location /static/ {
-    alias /opt/app-root/src/static/ |
-
----
-
-| Было | Стало |
-|------|--------|
-| <pre>location /keycloak/ {
-    proxy_pass https://${KEYCLOAK_HOST}:${KEYCLOAK_PORT}/;</pre> | <pre>location /keycloak/ {
-    proxy_pass http://${KEYCLOAK_HOST}:${KEYCLOAK_PORT}/;</pre> |
-
-
----
-| <pre>location /static/ {
-    alias /opt/app-root/static/</pre> | <pre>location /static/ {
-    alias /opt/app-root/src/static/</pre> |
-
----
 | Было | Стало |
 |------|--------|
 | <pre>location /keycloak/ {<br>    proxy_pass https://${KEYCLOAK_HOST}:${KEYCLOAK_PORT}/;<br>}</pre> | <pre>location /keycloak/ {<br>    proxy_pass http://${KEYCLOAK_HOST}:${KEYCLOAK_PORT}/;<br>}</pre> |
 | <pre>location /static/ {<br>    alias /opt/app-root/static/;<br>}</pre> | <pre>location /static/ {<br>    alias /opt/app-root/src/static/;<br>}</pre> |
-
-
 
 **Причина:**
 1. Keycloak настроен на работу по протоколу http на 8081 порту
