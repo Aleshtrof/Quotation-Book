@@ -25,7 +25,6 @@
 
 3.1 Изменён код в файле `Program.cs` для сервиса quotation-book-dotnet-obs
 
-'''
             // --- ДОБАВЛЕНО: PostgreSQL проверяем через TCP ---
             if (service.Key == "PostgreSQL")
             {
@@ -49,7 +48,6 @@
 
                 continue;
             }
-'''
 
 **Причина:** Исходный код выполнял подключение к postgres по http '{ "PostgreSQL", "http://quotation-book-postgres:5432" }'
 
@@ -73,10 +71,10 @@ KC_HOSTNAME_STRICT_HTTPS=true
 KC_PROXY_HEADERS=xforwarded
 
 **Причина:** Переменные необходимы для корректной работы keycloak за обратным прокси.  
-- KC_HOSTNAME - определяет внешний адрес. доступный пользователю  
-- KC_HOSTNAME_STRICT - разрешает принимать запросы, даже если значение заголовка Host не совпадает с KC_HOSTNAME (при работе через обратный прокси)  
-- KC_HOSTNAME_STRICT_HTTPS - позволяет считать внешний адрес HTTPS и генерировать ссылки с протоколом https.  
-- KC_PROXY_HEADERS - позволяет принимать заголовки от nginx
+KC_HOSTNAME - определяет внешний адрес. доступный пользователю  
+KC_HOSTNAME_STRICT - разрешает принимать запросы, даже если значение заголовка Host не совпадает с KC_HOSTNAME (при работе через обратный прокси)  
+KC_HOSTNAME_STRICT_HTTPS - позволяет считать внешний адрес HTTPS и генерировать ссылки с протоколом https.  
+KC_PROXY_HEADERS - позволяет принимать заголовки от nginx
 
 5.1 Изменено значение переменной `KC_HTTP_ENABLED`
 | было | стало |
@@ -92,18 +90,18 @@ KC_PROXY_HEADERS=xforwarded
 
 **Причина:** Keycloack не слушает порт 1443, в образе зашит порт 8081
 
-6. В docker compose добавлены стандартные переменные для сервиса quotation-book-pgadmin
--      PGADMIN_DEFAULT_EMAIL: "${PG_ADMIN_USER}"
--      PGADMIN_DEFAULT_PASSWORD: "${PG_ADMIN_PASSWORD}"
+6. В docker compose добавлены стандартные переменные для сервиса quotation-book-pgadmin  
+      PGADMIN_DEFAULT_EMAIL: "${PG_ADMIN_USER}"  
+      PGADMIN_DEFAULT_PASSWORD: "${PG_ADMIN_PASSWORD}"
 
 Причина: Переменные отсутсовали в файле `.env`
 
 7. В docker compose добавлены стандартные переменные для сервиса quotation-book-rabbitmq
--      ENABLE_SSL: "${ENABLE_SSL_RABBITMQ}"
--      SSL_PORT: "${RABBITMQ_PORT_SSL}"
--      CA_CERT_FILE: "${CA_CERTIFICATE}"
--      CERT_FILE: "${RABBITMQ_CERT_FILE}"
--      KEY_FILE: "${RABBITMQ_KEY_FILE}"
+      ENABLE_SSL: "${ENABLE_SSL_RABBITMQ}"
+      SSL_PORT: "${RABBITMQ_PORT_SSL}"
+      CA_CERT_FILE: "${CA_CERTIFICATE}"
+      CERT_FILE: "${RABBITMQ_CERT_FILE}"
+      KEY_FILE: "${RABBITMQ_KEY_FILE}"
 
 **Причина:** Переменные отсутсовали в файле `.env`. Переменные используются в docker-образе и влияют на подключение сервиса quotation-book-backend-worker
 
@@ -118,6 +116,8 @@ KC_PROXY_HEADERS=xforwarded
     alias /opt/app-root/static/ | location /static/ {
     alias /opt/app-root/src/static/ |
 
+---
+
 | Было | Стало |
 |------|--------|
 | <pre>location /keycloak/ {
@@ -127,7 +127,7 @@ KC_PROXY_HEADERS=xforwarded
 }</pre> |
 
 
-
+---
 | <pre>location /static/ {
     alias /opt/app-root/static/</pre> | <pre>location /static/ {
     alias /opt/app-root/src/static/</pre> |
@@ -135,38 +135,39 @@ KC_PROXY_HEADERS=xforwarded
 
 **Причина:**
 1. Keycloak настроен на работу по протоколу http на 8081 порту
-2. Ошибка в alias, адрес директории отличается от dockerfile `QB.Frontend.Dockerfile`
+2. Ошибка в alias, адрес директории отличается от dockerfile `QB.Frontend.Dockerfile`  
 
-9. Изменены маршруты аутентификации в файле auth.py
+9. Изменены маршруты аутентификации в файле `auth.py`
+
 | было | стало |
 |-------|------|
 | token_url = f"https | token_url = f"http |
 | userinfo_url = f"https | userinfo_url = f"http |
 | token_refresh_url = f"https | token_refresh_url = f"http |
 
-Причина: Необходимо для корректного формирования url для keycloak по http
+**Причина:** Необходимо для корректного формирования url для keycloak по http
 
-10. В docker compose переопределена переменная REDIS_PORT для сервиса quotation-book-backend-worker
-      TLS_PORT: "${REDIS_PORT_TLS}"
-      ENABLE_SSL: "${ENABLE_SSL_REDIS}"
-      TLS_CERT_FILE: "${TLS_CERT_FILE_REDIS}"
-      TLS_KEY_FILE: "${TLS_KEY_FILE_REDIS}"
-      TLS_CLIENT_CERT_AUTH: "${TLS_CLIENT_CERT_AUTH}"
+10. В docker compose переопределена переменная `REDIS_PORT` для сервиса quotation-book-backend-worker  
+      TLS_PORT: "${REDIS_PORT_TLS}"  
+      ENABLE_SSL: "${ENABLE_SSL_REDIS}"  
+      TLS_CERT_FILE: "${TLS_CERT_FILE_REDIS}"  
+      TLS_KEY_FILE: "${TLS_KEY_FILE_REDIS}"  
+      TLS_CLIENT_CERT_AUTH: "${TLS_CLIENT_CERT_AUTH}"  
       TLS_CA_CERT_FILE: "${CA_CERTIFICATE}"
 
-Причина: Несоответствие переменных в docker-entrypoint.sh и файле .env
+**Причина:** Несоответствие переменных в `docker-entrypoint.sh` и файле `.env`
 
-11. В docker compose переопределены переменные для сервисов quotation-book-backend-*
-      DB_HOST: "${POSTGRES_DB_HOST}"
-      DB_PORT: "${POSTGRES_DB_PORT}" 
+11. В docker compose переопределены переменные для сервисов quotation-book-backend-  
+      DB_HOST: "${POSTGRES_DB_HOST}"  
+      DB_PORT: "${POSTGRES_DB_PORT}"   
 
-Причина: Несоответствие переменных в docker-entrypoint.sh и файле .env
+Причина: Несоответствие переменных в `docker-entrypoint.sh` и файле `.env`
 
-12. В docker compose переопределены переменные для сервиса quotation-book-java-obs
-      DB_HOST: "${POSTGRES_DB_HOST}"
-      DB_PORT: "${POSTGRES_DB_PORT}"
-      DB_NAME: "${POSTGRES_DB_NAME}"
-      DB_USER: "${POSTGRES_DB_USER}"
+12. В docker compose переопределены переменные для сервиса quotation-book-java-obs  
+      DB_HOST: "${POSTGRES_DB_HOST}"  
+      DB_PORT: "${POSTGRES_DB_PORT}"  
+      DB_NAME: "${POSTGRES_DB_NAME}"  
+      DB_USER: "${POSTGRES_DB_USER}"  
       DB_PASSWORD: "${POSTGRES_DB_PASSWORD}"
 
-Причина: Несоответствие переменных в MetricsApp.java и файле .env
+Причина: Несоответствие переменных в `MetricsApp.java` и файле `.env`
