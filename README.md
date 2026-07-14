@@ -1,4 +1,6 @@
-Выполненны изменения:
+#Тестовое задание
+
+Внесены следующие изменения:  
 ### 1. Изменена переменная в `.env`
 
 | было | стало |
@@ -151,10 +153,10 @@ KC_PROXY_HEADERS - позволяет принимать заголовки от
 
 Причина: Несоответствие переменных в `MetricsApp.java` и файле `.env`
 
-
+---
 ## Адреса сервисов
-https://localhost:8443/
-http://localhost:15672/
-https://localhost:9001/
-http://localhost:5050/
+https://localhost:8443/  
+http://localhost:15672/  
+https://localhost:9001/  
+http://localhost:5050/  
 
